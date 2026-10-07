@@ -34,5 +34,5 @@ app.use("/api/controle",async(req,res)=>{
 });
 
 app.get("/health",(req,res)=>res.json({ok:true,app:"gelo-tutoia-controle"}));
-app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+app.use((req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
 app.listen(PORT,()=>console.log("Gelo Tutoia Controle online na porta",PORT));
