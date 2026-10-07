@@ -1,0 +1,11 @@
+{
+  "name": "gelo-tutoia-controle",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
