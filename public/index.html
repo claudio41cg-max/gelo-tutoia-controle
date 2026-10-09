@@ -125,8 +125,9 @@ button,input,select{font:inherit}button{cursor:pointer}
     </section>
 
     <section id="view-saidas" class="hidden">
-      <div class="hero"><div><div class="eyebrow">CONTROLE DE DESPESAS</div><h2>Saídas sob<br>controle.</h2><p>Registre combustível, ajudante, lanche e outras despesas da rota.</p></div><button class="primary" onclick="openExpense()">＋ &nbsp;Registrar saída</button></div>
+      <div class="hero"><div><div class="eyebrow">CONTROLE DE DESPESAS</div><h2>Despesas</h2></div><button class="primary" onclick="openExpense()">＋ &nbsp;Registrar saída</button></div>
       <div class="filters"><div class="field"><label>Dia</label><input id="date-saidas" type="date"></div></div>
+      <div class="table-card" id="helpers-card"><div class="table-head"><strong>Histórico dos Ajudantes</strong><div class="field"><label for="helpers-month">Mês</label><input id="helpers-month" type="month"></div></div><div style="padding:20px 24px"><div class="cards" id="helpers-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:10px"></div><div id="helpers-days" class="daily-list"></div></div></div>
       <div class="section-title"><h3>Despesas do dia</h3><small id="expense-count">0 registros</small></div>
       <div class="cards secondary">
         <div class="card highlight"><div class="label">Total de saídas</div><div class="value" id="e-total">R$ 0,00</div><div class="sub">Somatório do dia selecionado</div></div>
@@ -147,7 +148,9 @@ button,input,select{font:inherit}button{cursor:pointer}
 </div><div class="actions"><button class="cancel" onclick="closeModal('sale-modal')">Cancelar</button><button class="save" onclick="saveSale()">Salvar venda</button></div></div></div>
 
 <div class="modal-back" id="expense-modal"><div class="modal"><h3>Registrar saída</h3><div class="modal-grid">
-  <div class="field full"><label>Descrição</label><input id="e-desc" placeholder="Ex.: GNV, ajudante, lanche"></div>
+  <div class="field full"><label>Descrição</label><input id="e-desc" placeholder="Ex.: GNV, Tafarel, Maíra, lanche"></div>
+  <div class="field full"><label>Ajudante (somente quando for pagamento de ajudante)</label><select id="e-helper"><option value="">Não é pagamento de ajudante</option><option value="Tafarel">Tafarel (Luciano)</option><option value="Maíra">Maíra (Flávio)</option><option value="both">Tafarel e Maíra</option></select></div>
+  <div class="field full hidden" id="helper-split"><label>Quanto recebeu cada um? Os dois valores devem somar a saída.</label><div class="modal-grid"><div class="field"><label>Tafarel (R$)</label><input type="number" min="0" step=".01" id="e-tafarel"></div><div class="field"><label>Maíra (R$)</label><input type="number" min="0" step=".01" id="e-maira"></div></div></div>
   <div class="field"><label>Valor</label><input id="e-amount" type="number" min="0" step=".01"></div>
   <div class="field"><label>Data</label><input id="e-date" type="date"></div>
   <div class="field"><label>Horário</label><input id="e-time" type="time"></div>
@@ -164,7 +167,7 @@ let state={sales:[],expenses:[],period:'day'};
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200)}
 function closeModal(id){$(id).classList.remove('show')}
 function openSale(){$('s-client').value='';$('s-qty').value=1;$('s-type').value='esc';$('s-payment').value='Dinheiro';$('s-price').value=7;$('s-date').value=$('date-vendas').value||today();$('s-time').value=nowTime();$('sale-modal').classList.add('show')}
-function openExpense(){$('e-desc').value='';$('e-amount').value='';$('e-date').value=$('date-saidas').value||today();$('e-time').value=nowTime();$('expense-modal').classList.add('show')}
+function openExpense(){$('e-helper').value='';$('helper-split').classList.add('hidden');$('e-tafarel').value='';$('e-maira').value='';$('e-desc').value='';$('e-amount').value='';$('e-date').value=$('date-saidas').value||today();$('e-time').value=nowTime();$('expense-modal').classList.add('show')}
 
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 function showView(v){
@@ -222,11 +225,42 @@ function renderBook(){
   const days=[];for(let d=a;d<=b;d=addDays(d,1)){const sr=sales.filter(x=>localDateOf(x.sold_at)===d),er=expenses.filter(x=>localDateOf(x.spent_at)===d);if(sr.length||er.length||state.period==='day'){const tt=saleTotals(sr),dd=sum(er,'amount');days.push({d,...tt,desp:dd,liq:tt.bruto-dd})}}
   $('days-count').textContent=days.length+' dia(s) com movimento';$('daily-list').innerHTML=days.length?days.map(x=>`<div class="daily"><div class="date">${x.d.split('-').reverse().join('/')}</div><div><small>Sacos</small><b>${x.sacos}</b></div><div><small>Escamas</small><b>${x.esc}</b></div><div><small>Filtrado</small><b>${x.filt}</b></div><div><small>Bruto</small><b>${money(x.bruto)}</b></div><div><small>Despesas</small><b>${money(x.desp)}</b></div><div><small>Líquido</small><b>${money(x.liq)}</b></div></div>`).join(''):'<div class="empty">Sem movimento no período.</div>';
 }
+
+function helperFromDescription(description){
+  const d=String(description||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const t=/\b(tafarel|tafa|luciano)\b/.test(d),m=/\b(maira|flavio)\b/.test(d);
+  return t&&m?'both':t?'Tafarel':m?'Maíra':'';
+}
+function renderHelpers(){
+  const month=$('helpers-month').value||today().slice(0,7);
+  const helpers=['Tafarel','Maíra'];
+  const entries={Tafarel:[],Maíra:[]};
+  state.expenses.forEach(x=>{
+    const date=localDateOf(x.spent_at);
+    if(!date.startsWith(month))return;
+    const h=helperFromDescription(x.description);
+    if(h==='Tafarel'||h==='Maíra')entries[h].push({date,amount:Number(x.amount)||0});
+    // Registros antigos sem valores individuais não são divididos automaticamente.
+  });
+  $('helpers-summary').innerHTML=helpers.map(h=>{
+    const e=entries[h],days=new Set(e.map(x=>x.date)).size;
+    return '<div class="card" style="min-height:120px;padding:18px"><div class="label" style="margin-bottom:10px">'+h+'</div><div class="value" style="font-size:27px">'+money(sum(e,'amount'))+'</div><div class="sub">'+days+' dia(s) trabalhado(s) · '+e.length+' pagamento(s)</div></div>';
+  }).join('');
+  const dates=[...new Set(helpers.flatMap(h=>entries[h].map(x=>x.date)))].sort().reverse();
+  $('helpers-days').innerHTML=dates.length?dates.map(date=>{
+    const detail=helpers.map(h=>{
+      const rows=entries[h].filter(x=>x.date===date);
+      return rows.length?'<div>'+h+': <b>'+money(sum(rows,'amount'))+'</b> ('+rows.length+' pagamento(s))</div>':'';
+    }).join('');
+    return '<div class="daily" style="display:block"><b>'+date.split('-').reverse().join('/')+'</b><div style="margin-top:9px;color:#666a62">'+detail+'</div></div>';
+  }).join(''):'<div class="empty">Nenhum pagamento identificado para os ajudantes neste mês.</div>';
+}
+
 function renderExpenses(){
   const d=$('date-saidas').value,rows=state.expenses.filter(x=>localDateOf(x.spent_at)===d).sort((a,b)=>new Date(a.spent_at)-new Date(b.spent_at));
   $('e-total').textContent=money(sum(rows,'amount'));$('expense-count').textContent=rows.length+' registro(s)';
   $('expense-body').innerHTML=rows.map(x=>`<tr><td>${localTimeOf(x.spent_at)}</td><td><strong>${escapeHtml(x.description)}</strong></td><td>${money(x.amount)}</td><td><button class="ghost danger" onclick="deleteExpense('${x.id}')">Excluir</button></td></tr>`).join('');
-  $('expense-empty').classList.toggle('hidden',rows.length>0);$('expense-body').parentElement.classList.toggle('hidden',rows.length===0);
+  $('expense-empty').classList.toggle('hidden',rows.length>0);$('expense-body').parentElement.classList.toggle('hidden',rows.length===0);renderHelpers();
 }
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});if(r.status===401){location.href='/__panel/login';throw new Error('Sessão encerrada')}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Erro no servidor');return j}
 async function loadAll(){
@@ -237,18 +271,45 @@ async function saveSale(){
   if(!body.client||!body.qty||body.qty<1)return toast('Informe cliente e quantidade.');
   try{await api('/api/controle/sales',{method:'POST',body:JSON.stringify(body)});closeModal('sale-modal');toast('Venda registrada.');await loadAll()}catch(e){toast(e.message)}
 }
+let savingExpense=false;
 async function saveExpense(){
-  const body={description:$('e-desc').value.trim(),amount:Number($('e-amount').value),date:$('e-date').value,time:$('e-time').value};
-  if(!body.description||!body.amount||body.amount<=0)return toast('Informe descrição e valor.');
-  try{await api('/api/controle/expenses',{method:'POST',body:JSON.stringify(body)});closeModal('expense-modal');toast('Saída registrada.');await loadAll()}catch(e){toast(e.message)}
+  if(savingExpense)return;
+  const description=$('e-desc').value.trim(),amount=Number($('e-amount').value),date=$('e-date').value,time=$('e-time').value;
+  if(!description||!Number.isFinite(amount)||amount<=0)return toast('Informe descrição e valor.');
+  let h=$('e-helper').value||helperFromDescription(description);
+  if(!h&&/\bajudante(s)?\b/i.test(description)){
+    const pick=prompt('Qual ajudante recebeu? Digite 1 para Tafarel, 2 para Maíra, ou 3 para os dois.');
+    if(pick===null)return;
+    h=pick.trim()==='1'?'Tafarel':pick.trim()==='2'?'Maíra':pick.trim()==='3'?'both':'';
+    if(!h)return toast('Escolha um ajudante válido.');
+  }
+  let payments=[];
+  if(h==='both'){
+    const t=Number($('e-tafarel').value),m=Number($('e-maira').value);
+    if($('helper-split').classList.contains('hidden')){ $('e-helper').value='both';toggleHelperSplit();return toast('Informe quanto cada ajudante recebeu.');}
+    const cents=v=>Math.round(v*100);
+    if(!Number.isFinite(t)||!Number.isFinite(m)||t<=0||m<=0||cents(t)+cents(m)!==cents(amount))return toast('Informe os dois valores; a soma precisa ser igual ao valor total.');
+    payments=[{description:'Ajudante Tafarel · '+description,amount:t},{description:'Ajudante Maíra · '+description,amount:m}];
+  }else if(h){payments=[{description:'Ajudante '+h+' · '+description,amount}];}
+  else payments=[{description,amount}];
+  savingExpense=true;
+  let completed=0;
+  try{
+    for(const payment of payments){await api('/api/controle/expenses',{method:'POST',body:JSON.stringify({...payment,date,time})});completed++;}
+    closeModal('expense-modal');toast('Saída registrada.');await loadAll();
+  }catch(e){await loadAll();toast(completed?'Um pagamento gravado; confira antes de repetir.':e.message)}
+  finally{savingExpense=false}
 }
+function toggleHelperSplit(){$('helper-split').classList.toggle('hidden',$('e-helper').value!=='both')}
 async function deleteSale(id){if(!confirm('Excluir esta venda do movimento?'))return;try{await api('/api/controle/sales/'+encodeURIComponent(id),{method:'DELETE'});await loadAll();toast('Venda excluída.')}catch(e){toast(e.message)}}
 async function deleteExpense(id){if(!confirm('Excluir esta saída?'))return;try{await api('/api/controle/expenses/'+encodeURIComponent(id),{method:'DELETE'});await loadAll();toast('Saída excluída.')}catch(e){toast(e.message)}}
 ['date-vendas','time-start','time-end'].forEach(id=>$(id).addEventListener('change',renderSales));
-$('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);
+$('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);$('helpers-month').addEventListener('change',renderHelpers);
+$('e-helper').addEventListener('change',toggleHelperSplit);
+$('e-desc').addEventListener('input',()=>{const h=helperFromDescription($('e-desc').value);if(h){$('e-helper').value=h;toggleHelperSplit()}});
 document.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{state.period=b.dataset.period;document.querySelectorAll('[data-period]').forEach(x=>x.classList.toggle('active',x===b));renderBook()});
 $('s-type').addEventListener('change',()=>{$('s-price').value=$('s-type').value==='filt'?13:7});
-const t=today();$('date-vendas').value=t;$('date-caderno').value=t;$('date-saidas').value=t;
+const t=today();$('date-vendas').value=t;$('date-caderno').value=t;$('date-saidas').value=t;$('helpers-month').value=t.slice(0,7);
 
 function openHashView(){
   const v=location.hash.replace('#','');
