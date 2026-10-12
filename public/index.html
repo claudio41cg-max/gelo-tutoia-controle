@@ -118,7 +118,7 @@ button,input,select{font:inherit}button{cursor:pointer}
         <div class="field"><label>Data de referência</label><input id="date-caderno" type="date"></div>
         <div class="field" style="grid-column:span 2"><label>Visualização</label><div class="period-switch"><button data-period="day" class="active">Dia</button><button data-period="week">Semana</button><button data-period="month">Mês</button></div></div>
       </div>
-      <div class="table-card" style="margin:0 0 30px"><div class="table-head"><strong>Clientes</strong><small id="client-history-count"></small></div><div id="client-history-list" class="client-history-list"></div></div>
+      <div class="table-card" style="margin:0 0 30px"><button type="button" id="client-history-toggle" class="client-history-toggle" style="padding:21px 24px" aria-expanded="false"><span><strong style="font-size:19px">Clientes</strong><small id="client-history-count"></small></span><span id="client-history-arrow" aria-hidden="true">⌄</span></button><div id="client-history-list" class="client-history-list hidden"></div></div>
       <div class="section-title"><h3 id="book-title">Resumo do dia</h3><small id="book-range"></small></div>
       <div class="cards">
         <div class="card highlight"><div class="label">Bruto</div><div class="value" id="b-bruto">R$ 0,00</div><div class="sub">Total vendido no período</div></div>
@@ -229,6 +229,14 @@ function periodRange(dateStr,mode){
   return [dateStr.slice(0,7)+'-01',new Date(Number(dateStr.slice(0,4)),Number(dateStr.slice(5,7)),0,12).toISOString().slice(0,10)];
 }
 function inRange(iso,a,b,type){const d=type==='spent'?localDateOf(iso.spent_at):localDateOf(iso.sold_at);return d>=a&&d<=b}
+let clientListOpen=false;
+function toggleClientList(){
+  clientListOpen=!clientListOpen;
+  $('client-history-list').classList.toggle('hidden',!clientListOpen);
+  $('client-history-toggle').setAttribute('aria-expanded',String(clientListOpen));
+  $('client-history-arrow').textContent=clientListOpen?'⌃':'⌄';
+}
+document.getElementById('client-history-toggle').addEventListener('click',toggleClientList);
 let expandedClientName=null;
 function toggleClientHistory(name){
   expandedClientName=expandedClientName===name?null:name;
