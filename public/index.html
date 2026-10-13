@@ -56,6 +56,9 @@ button,input,select{font:inherit}button{cursor:pointer}
 .helper-day:last-child{border:0}
 .helper-day div{margin-top:5px;color:#676c63;font-weight:650}
 .helper-day small{display:block;margin-top:3px;color:var(--muted)}
+.sales-expand-toggle{border:0;background:transparent;color:var(--ink);font-size:19px;font-weight:800;text-align:left;padding:0;display:flex;align-items:center;gap:12px;flex:1;justify-content:space-between}
+.sales-expand-toggle:focus-visible{outline:3px solid var(--green);outline-offset:5px;border-radius:6px}
+#sales-expand-arrow{color:#878b82;font-size:24px;font-weight:600}
 .hidden{display:none!important}
 .client-history-list{padding:12px 18px 18px;display:grid;gap:10px}
 .client-history-item{border:1px solid var(--line);border-radius:16px;background:#fbfbf8;overflow:hidden}
@@ -103,8 +106,6 @@ button,input,select{font:inherit}button{cursor:pointer}
       <div class="hero"><div><div class="eyebrow">BOM TRABALHO, CLÁUDIO</div><h2>Cada venda,<br>na conta.</h2><p>Confira suas entregas e feche o dia com tudo em ordem.</p></div><button class="primary" onclick="openSale()">＋ &nbsp;Registrar venda</button></div>
       <div class="filters">
         <div class="field"><label>Dia de trabalho</label><input id="date-vendas" type="date"></div>
-        <div class="field"><label>Horário inicial</label><input id="time-start" type="time"></div>
-        <div class="field"><label>Horário final</label><input id="time-end" type="time"></div>
       </div>
       <div class="section-title"><h3>O dia em números</h3><small id="scope-vendas">Vendas atuais · dia inteiro</small></div>
       <div class="cards">
@@ -119,9 +120,9 @@ button,input,select{font:inherit}button{cursor:pointer}
         <div class="card" role="button" tabindex="0" data-detail="filtrado" aria-label="Ver detalhes de filtrado"><div class="label">◈ Gelo filtrado</div><div class="value" id="v-filtrado">0</div><div class="sub" id="v-filtrado-value">R$ 0,00</div></div>
       </div>
       <div class="table-card">
-        <div class="table-head"><strong>Vendas atuais <span id="sales-count">0</span></strong><div class="toolbar"><button class="ghost" onclick="loadAll()">Atualizar</button></div></div>
-        <div class="table-wrap"><table><thead><tr><th>Horário</th><th>Cliente</th><th>Gelo</th><th>Sacos</th><th>Pagamento</th><th>Total</th><th></th></tr></thead><tbody id="sales-body"></tbody></table></div>
-        <div class="empty hidden" id="sales-empty">O dia começa com a primeira venda.</div>
+        <div class="table-head"><button type="button" id="sales-expand-toggle" aria-expanded="false" aria-controls="sales-expanded" class="sales-expand-toggle"><span>Vendas atuais <span id="sales-count">0</span></span><span id="sales-expand-arrow" aria-hidden="true">⌄</span></button><div class="toolbar"><button class="ghost" onclick="loadAll()">Atualizar</button></div></div>
+        <div id="sales-expanded" class="hidden"><div class="table-wrap"><table><thead><tr><th>Horário</th><th>Cliente</th><th>Gelo</th><th>Sacos</th><th>Pagamento</th><th>Total</th><th></th></tr></thead><tbody id="sales-body"></tbody></table></div>
+        <div class="empty hidden" id="sales-empty">O dia começa com a primeira venda.</div></div>
       </div>
     </section>
 
@@ -219,18 +220,18 @@ function saleTotals(rows){
   return {bruto,din,pix,fiado,esc:sum(esc,'qty'),filt:sum(filt,'qty'),escv:sum(esc,'total_value'),filtv:sum(filt,'total_value'),sacos:sum(rows,'qty')}
 }
 function selectedDayRows(){
-  const d=$('date-vendas').value,ini=$('time-start').value,fim=$('time-end').value;
-  return state.sales.filter(x=>localDateOf(x.sold_at)===d).filter(x=>{const h=localTimeOf(x.sold_at);return(!ini||h>=ini)&&(!fim||h<=fim)});
+  const d=$('date-vendas').value;
+  return state.sales.filter(x=>localDateOf(x.sold_at)===d);
 }
 function selectedDayExpenses(){
-  const d=$('date-vendas').value,ini=$('time-start').value,fim=$('time-end').value;
-  return state.expenses.filter(x=>localDateOf(x.spent_at)===d).filter(x=>{const h=localTimeOf(x.spent_at);return(!ini||h>=ini)&&(!fim||h<=fim)});
+  const d=$('date-vendas').value;
+  return state.expenses.filter(x=>localDateOf(x.spent_at)===d);
 }
 function renderSales(){
   const rows=selectedDayRows(),ex=selectedDayExpenses(),t=saleTotals(rows),saidas=sum(ex,'amount');
   $('v-bruto').textContent=money(t.bruto);$('v-dinheiro').textContent=money(t.din);$('v-pix').textContent=money(t.pix);$('v-saidas').textContent=money(saidas);$('v-liquido').textContent=money(t.bruto-saidas);
   $('v-escamas').textContent=t.esc+' sacos';$('v-filtrado').textContent=t.filt+' sacos';$('v-escamas-value').textContent=money(t.escv);$('v-filtrado-value').textContent=money(t.filtv);$('sales-count').textContent=rows.length;
-  $('scope-vendas').textContent=($('time-start').value||$('time-end').value)?'Vendas atuais · horário filtrado':'Vendas atuais · dia inteiro';
+  $('scope-vendas').textContent='Vendas atuais · dia inteiro';
   const body=$('sales-body');body.innerHTML='';
   rows.sort((a,b)=>new Date(a.sold_at)-new Date(b.sold_at)).forEach(x=>{
     const tr=document.createElement('tr');
@@ -406,7 +407,13 @@ async function saveExpense(){
 function toggleHelperSplit(){$('helper-split').classList.toggle('hidden',$('e-helper').value!=='both')}
 async function deleteSale(id){if(!confirm('Excluir esta venda do movimento?'))return;try{await api('/api/controle/sales/'+encodeURIComponent(id),{method:'DELETE'});await loadAll();toast('Venda excluída.')}catch(e){toast(e.message)}}
 async function deleteExpense(id){if(!confirm('Excluir esta saída?'))return;try{await api('/api/controle/expenses/'+encodeURIComponent(id),{method:'DELETE'});await loadAll();toast('Saída excluída.')}catch(e){toast(e.message)}}
-['date-vendas','time-start','time-end'].forEach(id=>$(id).addEventListener('change',renderSales));
+$('date-vendas').addEventListener('change',renderSales);
+$('sales-expand-toggle').addEventListener('click',()=>{
+ const el=$('sales-expanded'),opening=el.classList.contains('hidden');
+ el.classList.toggle('hidden',!opening);
+ $('sales-expand-toggle').setAttribute('aria-expanded',String(opening));
+ $('sales-expand-arrow').textContent=opening?'⌃':'⌄';
+});
 $('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);$('helpers-month').addEventListener('change',renderHelpers);
 $('e-helper').addEventListener('change',toggleHelperSplit);
 $('e-desc').addEventListener('input',()=>{const h=helperFromDescription($('e-desc').value);if(h){$('e-helper').value=h;toggleHelperSplit()}});
