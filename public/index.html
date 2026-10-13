@@ -49,6 +49,13 @@ button,input,select{font:inherit}button{cursor:pointer}
 .detail-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:1px solid var(--line);padding:12px 0}
 .detail-line small{display:block;color:var(--muted);font-size:12px;margin-top:5px;line-height:1.5}
 .detail-total{display:flex;justify-content:space-between;gap:12px;padding:13px;background:var(--soft2);border-radius:12px;font-weight:800;margin-top:12px}
+.helper-card{cursor:pointer;min-width:0;padding:18px}
+.helper-card:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.helper-card-days{border-top:1px solid var(--line);margin-top:14px;padding-top:8px}
+.helper-day{padding:10px 0;border-bottom:1px solid #ecece7;font-size:13px;overflow-wrap:anywhere}
+.helper-day:last-child{border:0}
+.helper-day div{margin-top:5px;color:#676c63;font-weight:650}
+.helper-day small{display:block;margin-top:3px;color:var(--muted)}
 .hidden{display:none!important}
 .client-history-list{padding:12px 18px 18px;display:grid;gap:10px}
 .client-history-item{border:1px solid var(--line);border-radius:16px;background:#fbfbf8;overflow:hidden}
@@ -146,7 +153,7 @@ button,input,select{font:inherit}button{cursor:pointer}
     <section id="view-saidas" class="hidden">
       <div class="hero"><div><div class="eyebrow">CONTROLE DE DESPESAS</div><h2>Despesas</h2></div><button class="primary" onclick="openExpense()">＋ &nbsp;Registrar saída</button></div>
       <div class="filters"><div class="field"><label>Dia</label><input id="date-saidas" type="date"></div></div>
-      <div class="table-card" id="helpers-card"><div class="table-head"><strong>Histórico dos Ajudantes</strong><div class="field"><label for="helpers-month">Mês</label><input id="helpers-month" type="month"></div></div><div style="padding:20px 24px"><div class="cards" id="helpers-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:10px"></div><div id="helpers-days" class="daily-list"></div></div></div>
+      <div class="table-card" id="helpers-card"><div class="table-head"><strong>Histórico dos Ajudantes</strong><div class="field"><label for="helpers-month">Mês</label><input id="helpers-month" type="month"></div></div><div style="padding:20px 24px"><div class="cards" id="helpers-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:0"></div></div></div>
       <div class="section-title"><h3>Despesas do dia</h3><small id="expense-count">0 registros</small></div>
       <div class="cards secondary">
         <div class="card highlight"><div class="label">Total de saídas</div><div class="value" id="e-total">R$ 0,00</div><div class="sub">Somatório do dia selecionado</div></div>
@@ -323,6 +330,11 @@ function helperFromDescription(description){
   const t=/\b(tafarel|tafa|luciano)\b/.test(d),m=/\b(maira|flavio)\b/.test(d);
   return t&&m?'both':t?'Tafarel':m?'Maíra':'';
 }
+let openHelperCard='';
+function toggleHelperCard(name){
+  openHelperCard=openHelperCard===name?'':name;
+  renderHelpers();
+}
 function renderHelpers(){
   const month=$('helpers-month').value||today().slice(0,7);
   const helpers=['Tafarel','Maíra'];
@@ -332,22 +344,21 @@ function renderHelpers(){
     if(!date.startsWith(month))return;
     const h=helperFromDescription(x.description);
     if(h==='Tafarel'||h==='Maíra')entries[h].push({date,amount:Number(x.amount)||0});
-    // Registros antigos sem valores individuais não são divididos automaticamente.
   });
   $('helpers-summary').innerHTML=helpers.map(h=>{
-    const e=entries[h],days=new Set(e.map(x=>x.date)).size;
-    return '<div class="card" style="min-height:120px;padding:18px"><div class="label" style="margin-bottom:10px">'+h+'</div><div class="value" style="font-size:27px">'+money(sum(e,'amount'))+'</div><div class="sub">'+days+' dia(s) trabalhado(s) · '+e.length+' pagamento(s)</div></div>';
+    const e=entries[h],dates=[...new Set(e.map(x=>x.date))].sort().reverse(),opened=openHelperCard===h;
+    const details=opened?'<div class="helper-card-days">'+(dates.length?dates.map(date=>{
+      const rows=e.filter(x=>x.date===date);
+      return '<div class="helper-day"><strong>'+date.split('-').reverse().join('/')+'</strong><div>'+money(sum(rows,'amount'))+' · '+rows.length+' pagamento(s)</div>'+rows.map(x=>'<small>'+money(x.amount)+'</small>').join('')+'</div>';
+    }).join(''):'<div class="empty" style="padding:14px">Nenhum pagamento neste mês.</div>')+'</div>':'';
+    return '<div class="card helper-card" role="button" tabindex="0" data-helper="'+h+'" aria-expanded="'+opened+'"><div class="label" style="margin-bottom:10px">'+h+' <span style="float:right">'+(opened?'⌃':'⌄')+'</span></div><div class="value" style="font-size:clamp(17px,4.2vw,27px)">'+money(sum(e,'amount'))+'</div><div class="sub">'+dates.length+' dia(s) trabalhado(s) · '+e.length+' pagamento(s)</div>'+details+'</div>';
   }).join('');
-  const dates=[...new Set(helpers.flatMap(h=>entries[h].map(x=>x.date)))].sort().reverse();
-  $('helpers-days').innerHTML=dates.length?dates.map(date=>{
-    const detail=helpers.map(h=>{
-      const rows=entries[h].filter(x=>x.date===date);
-      return rows.length?'<div>'+h+': <b>'+money(sum(rows,'amount'))+'</b> ('+rows.length+' pagamento(s))</div>':'';
-    }).join('');
-    return '<div class="daily" style="display:block"><b>'+date.split('-').reverse().join('/')+'</b><div style="margin-top:9px;color:#666a62">'+detail+'</div></div>';
-  }).join(''):'<div class="empty">Nenhum pagamento identificado para os ajudantes neste mês.</div>';
+  $('helpers-summary').querySelectorAll('[data-helper]').forEach(card=>{
+    const click=()=>toggleHelperCard(card.dataset.helper);
+    card.addEventListener('click',click);
+    card.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();click()}});
+  });
 }
-
 function renderExpenses(){
   const d=$('date-saidas').value,rows=state.expenses.filter(x=>localDateOf(x.spent_at)===d).sort((a,b)=>new Date(a.spent_at)-new Date(b.spent_at));
   $('e-total').textContent=money(sum(rows,'amount'));$('expense-count').textContent=rows.length+' registro(s)';
