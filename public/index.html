@@ -300,17 +300,19 @@ const CLIENT_ALIASES={
   'Churrasco Cosmos':['churrasco cosmos','frango cosmos','frango de cosmos','frango cosmo','churrasco cosmo','cliente frango cosmos'],
   'Churrasco Tia':['churrasco tia','churrasco da tia','churrasco em frente a tia','churrasco ao lado da tia','churrasco 2 t'],
   'Churrasco Lilian':['churrasco lilian','churrasco da lilian','churrasco ao lado da lilian','churrasco 1 l'],
-  'Caldo da Praça':['caldo da praca','caldo de cana da praca','barraca caldo da praca','barraca da praca','caldo sacolao','barraca do sacolao','barraca caldo de cana inhoaiba sacolao','barraca inhoaiba azul','barraca azul','nova barraca azul'],
+  'Caldo da Praça':['caldo da praca','caldo de cana da praca','barraca caldo da praca','barraca da praca','caldo sacolao','barraca do sacolao','barraca caldo de cana inhoaiba sacolao','barraca inhoaiba azul','inhoaiba barraca azul','barraca azul','nova barraca azul'],
   'Marcelo':['marcelo','marcelo rua 22','barraca marcelo','barraca do marcelo','barraca da 22','caldo da 22','caldo do marcelo','caldo marcelo','caldo de cana do marcelo','caldo de cana da rua 22','caldo de cana bmg'],
   'Marcelo Cosmos':['marcelo cosmos','marcelo cosmo'],
-  'Barraca The Best':['barraca the best','the best','debest','caldo debest','caldo de cana debest','barraca debest','barraca da clinica da familia','barraca caldo clinica da familia','caldo de cana clinica da familia','caldo de cana na clinica da familia','caldo de cana clinica esquerdo','caldo do posto clinica esquerdo','caldo do lado do marcio','caldo inhoaiba','caldo ao lado de marcio','caldo do posto','barraca do posto','barraca do lado esquerdo','caldo de cana - clinica da familia'],
+  'Barraca The Best':['barraca the best','the best','debest','caldo debest','caldo de cana debest','barraca debest','barraca da clinica da familia','barraca caldo clinica da familia','caldo de cana clinica da familia','caldo de cana na clinica da familia','caldo de cana clinica esquerdo','caldo do posto clinica esquerdo','caldo inhoaiba','caldo do posto','caldo de cana posto','barraca do posto','barraca do lado esquerdo','caldo de cana - clinica da familia'],
   'Padaria Paciência':['padaria paciencia','padaria de paciencia'],
-  'Cliente Rua Geral':['cliente rua geral','cliente rua geraldo','cliente rua'],
+  'Cliente Rua':['cliente rua geral','cliente rua geraldo','cliente rua'],
   'Cliente Rua Peixaria':['cliente rua peixaria','peixeiro rua','peixaria rua','peixaria de rua'],
+  'Peixaria Ivan':['peixaria ivan','ivan','ivam'],
   'Peixaria Bacaxá':['peixaria bacaxa','seu jorge','peixaria do jorge','jorge'],
   'Custódio':['custodio','peixaria do custodio','escorinho'],
   'Luiz Peixaria':['luiz peixaria','seu luiz','peixaria do luiz']
 };
+const REMOVED_CUSTOMER_NAMES=new Set(['churrasco ao lado','frango mineiro','caldo de cana ao lado do marcio']);
 const normalizeClientText=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const clientAliasMap=new Map(Object.entries(CLIENT_ALIASES).flatMap(([name,names])=>names.map(alias=>[normalizeClientText(alias),name])));
 function canonicalClient(name){const raw=String(name||'').trim();return clientAliasMap.get(normalizeClientText(raw))||raw}
@@ -322,10 +324,10 @@ function toggleClientHistory(name){
 }
 function renderClientHistory(){
   const ref=$('date-caderno').value||today(),[a,b]=periodRange(ref,state.period);
-  const allNames=[...new Set(state.sales.map(x=>canonicalClient(x.client)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const allNames=[...new Set(state.sales.map(x=>canonicalClient(x.client)).filter(name=>name&&!REMOVED_CUSTOMER_NAMES.has(normalizeClientText(name))))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const sales=state.sales.filter(x=>inRange(x,a,b,'sold'));
   const grouped=new Map();
-  sales.forEach(x=>{const name=canonicalClient(x.client);if(!name)return;if(!grouped.has(name))grouped.set(name,[]);grouped.get(name).push(x)});
+  sales.forEach(x=>{const name=canonicalClient(x.client);if(!name||REMOVED_CUSTOMER_NAMES.has(normalizeClientText(name)))return;if(!grouped.has(name))grouped.set(name,[]);grouped.get(name).push(x)});
   $('client-history-count').textContent=allNames.length+' cliente(s)';
   const el=$('client-history-list');
   if(!allNames.length){el.innerHTML='<div class="empty">Nenhum cliente com vendas registradas.</div>';return}
