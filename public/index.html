@@ -289,7 +289,12 @@ function toggleClientList(){
   $('client-history-arrow').textContent=clientListOpen?'⌃':'⌄';
 }
 document.getElementById('client-history-toggle').addEventListener('click',toggleClientList);
+const ROUTE_CLIENT_ORDER=["Seu Pedro","Henrique","Marcelo","Padaria BMG","Alex Perninha","Peixaria Pará","Peixaria Tiago","Alex Campinho","Sou JOY","Alex Baiano","Peixaria Ivan","Filomena","Caldo da Praça","Márcio","Barraca The Best","Marcelo Cosmos","Alex Laranja","Jonny Feira","Luiz Peixaria","Padaria Paciência","Salão Piscina","Lilian","Churrasco Lilian","Café","Bruno","Chatuba","Tia","Churrasco Tia","Sr. Gilson","Peixaria Bacaxá","Custódio","Kinho Sapateiro"];
 const CLIENT_ALIASES={
+  'Alex Laranja':['alex laranja','laranja'],
+  'Kinho Sapateiro':['kinho sapateiro','kinho'],
+  'Peixaria Ivan':['peixaria ivan','ivan','ivam'],
+  'Luiz Peixaria':['luiz peixaria','seu luiz','peixaria do luiz'],
   'Alex Perninha':['alex perninha','alex rua 22','perninha','alex vinte e dois'],
   'Filomena':['filomena','maria helieide','maria helieidi','maria eleide','maria elieidi','maria leide','peixaria filomena','peixaria da filomena'],
   'Padaria BMG':['padaria bmg','padaria da 22','padaria rua 22','padaria da rua 22','bmg'],
@@ -324,7 +329,7 @@ function toggleClientHistory(name){
 }
 function renderClientHistory(){
   const ref=$('date-caderno').value||today(),[a,b]=periodRange(ref,state.period);
-  const allNames=[...new Set(state.sales.map(x=>canonicalClient(x.client)).filter(name=>name&&!REMOVED_CUSTOMER_NAMES.has(normalizeClientText(name))))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const allNames=[...new Set(state.sales.map(x=>canonicalClient(x.client)).filter(name=>name&&!REMOVED_CUSTOMER_NAMES.has(normalizeClientText(name))))].sort((a,b)=>{const ai=ROUTE_CLIENT_ORDER.indexOf(a),bi=ROUTE_CLIENT_ORDER.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b,'pt-BR')});
   const sales=state.sales.filter(x=>inRange(x,a,b,'sold'));
   const grouped=new Map();
   sales.forEach(x=>{const name=canonicalClient(x.client);if(!name||REMOVED_CUSTOMER_NAMES.has(normalizeClientText(name)))return;if(!grouped.has(name))grouped.set(name,[]);grouped.get(name).push(x)});
