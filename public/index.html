@@ -204,7 +204,7 @@ let state={sales:[],expenses:[],period:'day'};
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200)}
 function closeModal(id){$(id).classList.remove('show')}
 function openSale(){$('s-client').value='';$('s-qty').value=1;$('s-type').value='esc';$('s-payment').value='Dinheiro';$('s-price').value=7;$('s-date').value=$('date-vendas').value||today();$('s-time').value=nowTime();$('sale-modal').classList.add('show')}
-function openExpense(){$('e-category').value='loja';$('e-helper-field').classList.remove('hidden');$('e-helper').value='';$('helper-split').classList.add('hidden');$('e-tafarel').value='';$('e-maira').value='';$('e-desc').value='';$('e-amount').value='';$('e-date').value=$('date-saidas').value||today();$('e-time').value=nowTime();$('expense-modal').classList.add('show')}
+function openExpense(){$('e-category').value='pessoal';$('e-helper-field').classList.add('hidden');$('e-helper').value='';$('helper-split').classList.add('hidden');$('e-tafarel').value='';$('e-maira').value='';$('e-desc').value='';$('e-amount').value='';$('e-date').value=$('date-saidas').value||today();$('e-time').value=nowTime();$('expense-modal').classList.add('show')}
 
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 function showView(v){
@@ -352,15 +352,18 @@ function renderClientHistory(){
   el.querySelectorAll('[data-client-index]').forEach(b=>b.addEventListener('click',()=>toggleClientHistory(allNames[Number(b.dataset.clientIndex)])));
 }
 
-function classifyExpense(x){
- const d=String(x.description||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
- if(d.startsWith('[pessoal]'))return 'pessoal';
- if(d.startsWith('[loja]'))return 'loja';
- if(/\b(tafarel|maira|luciano|flavio|ajudante|gnv|ensacar|sacos de gelo|saco para gelo|maquina|manutencao|pecas|obra|terreno)\b/.test(d))return 'loja';
- if(/\b(etanol|alcool|gasolina|mercado|lanche|comida|restaurante|roupa|passeio|viagem|bar|bebida|uber|acai)\b/.test(d))return 'pessoal';
- return 'indefinida';
+function defaultExpenseCategory(description){
+ const d=String(description||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ return /\b(tafarel|tafa|maira|luciano|flavio|ajudante|ajudantes|gnv)\b/.test(d)?'loja':'pessoal';
 }
-function expenseLabel(x){return String(x.description||'').replace(/^\[(?:PESSOAL|LOJA)\]\s*/i,'')}
+function classifyExpense(x){
+ const description=String(x.description||'');
+ if(/^\[PESSOAL\]/i.test(description))return 'pessoal';
+ if(/^\[LOJA CONFIRMADA\]/i.test(description))return 'loja';
+ // Lançamentos antigos com [LOJA] são reavaliados pelo novo critério.
+ return defaultExpenseCategory(description);
+}
+function expenseLabel(x){return String(x.description||'').replace(/^\[(?:PESSOAL|LOJA(?: CONFIRMADA)?)\]\s*/i,'')}
 function expenseBreakdown(rows){return {loja:sum(rows.filter(x=>classifyExpense(x)==='loja'),'amount'),pessoal:sum(rows.filter(x=>classifyExpense(x)==='pessoal'),'amount'),indefinida:sum(rows.filter(x=>classifyExpense(x)==='indefinida'),'amount')}}
 function openBookDetail(kind){
  const ref=$('date-caderno').value||today(),[a,b]=periodRange(ref,state.period);
@@ -457,7 +460,7 @@ async function saveExpense(){
   const description=$('e-desc').value.trim(),amount=Number($('e-amount').value),date=$('e-date').value,time=$('e-time').value,category=$('e-category').value;
   if(!description||!Number.isFinite(amount)||amount<=0)return toast('Informe descrição e valor.');
   let h=category==='loja'?($('e-helper').value||helperFromDescription(description)):'';
-  if(!h&&/\bajudante(s)?\b/i.test(description)){
+  if(category==='loja'&&!h&&/\bajudante(s)?\b/i.test(description)){
     const pick=prompt('Qual ajudante recebeu? Digite 1 para Tafarel, 2 para Maíra, ou 3 para os dois.');
     if(pick===null)return;
     h=pick.trim()==='1'?'Tafarel':pick.trim()==='2'?'Maíra':pick.trim()==='3'?'both':'';
@@ -472,7 +475,7 @@ async function saveExpense(){
     payments=[{description:'Ajudante Tafarel · '+description,amount:t},{description:'Ajudante Maíra · '+description,amount:m}];
   }else if(h){payments=[{description:'Ajudante '+h+' · '+description,amount}];}
   else payments=[{description,amount}];
-  payments=payments.map(p=>({...p,description:(category==='pessoal'?'[PESSOAL] ':'[LOJA] ')+p.description}));
+  payments=payments.map(p=>({...p,description:(category==='pessoal'?'[PESSOAL] ':'[LOJA CONFIRMADA] ')+p.description}));
   savingExpense=true;
   let completed=0;
   try{
@@ -494,7 +497,16 @@ $('sales-expand-toggle').addEventListener('click',()=>{
 $('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);$('helpers-month').addEventListener('change',renderHelpers);
 $('e-helper').addEventListener('change',toggleHelperSplit);
 $('e-category').addEventListener('change',()=>{const personal=$('e-category').value==='pessoal';$('e-helper-field').classList.toggle('hidden',personal);if(personal){$('e-helper').value='';toggleHelperSplit()}});
-$('e-desc').addEventListener('input',()=>{const h=helperFromDescription($('e-desc').value);if(h){$('e-helper').value=h;toggleHelperSplit()}});
+$('e-desc').addEventListener('input',()=>{
+ const desc=$('e-desc').value;
+ const defaultCategory=defaultExpenseCategory(desc);
+ $('e-category').value=defaultCategory;
+ const personal=defaultCategory==='pessoal';
+ $('e-helper-field').classList.toggle('hidden',personal);
+ const h=personal?'':helperFromDescription(desc);
+ $('e-helper').value=h;
+ toggleHelperSplit();
+});
 document.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{state.period=b.dataset.period;document.querySelectorAll('[data-period]').forEach(x=>x.classList.toggle('active',x===b));renderBook()});
 $('s-type').addEventListener('change',()=>{$('s-price').value=$('s-type').value==='filt'?13:7});
 document.querySelectorAll('#view-caderno [data-book]').forEach(card=>{const run=()=>openBookDetail(card.dataset.book);card.addEventListener('click',run);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();run()}})});
