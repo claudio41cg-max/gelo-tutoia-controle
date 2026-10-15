@@ -59,6 +59,8 @@ button,input,select{font:inherit}button{cursor:pointer}
 .sales-expand-toggle{border:0;background:transparent;color:var(--ink);font-size:19px;font-weight:800;text-align:left;padding:0;display:flex;align-items:center;gap:12px;flex:1;justify-content:space-between}
 .sales-expand-toggle:focus-visible{outline:3px solid var(--green);outline-offset:5px;border-radius:6px}
 #sales-expand-arrow{color:#878b82;font-size:24px;font-weight:600}
+#view-caderno [data-book]{cursor:pointer}
+#view-caderno [data-book]:focus-visible{outline:3px solid var(--green);outline-offset:2px}
 .hidden{display:none!important}
 .client-history-list{padding:12px 18px 18px;display:grid;gap:10px}
 .client-history-item{border:1px solid var(--line);border-radius:16px;background:#fbfbf8;overflow:hidden}
@@ -135,15 +137,15 @@ button,input,select{font:inherit}button{cursor:pointer}
       <div class="table-card" style="margin:0 0 30px"><button type="button" id="client-history-toggle" class="client-history-toggle" style="padding:21px 24px" aria-expanded="false"><span><strong style="font-size:19px">Clientes</strong><small id="client-history-count"></small></span><span id="client-history-arrow" aria-hidden="true">⌄</span></button><div id="client-history-list" class="client-history-list hidden"></div></div>
       <div class="section-title"><h3 id="book-title">Resumo do dia</h3><small id="book-range"></small></div>
       <div class="cards">
-        <div class="card highlight"><div class="label">Bruto</div><div class="value" id="b-bruto">R$ 0,00</div><div class="sub">Total vendido no período</div></div>
-        <div class="card"><div class="label">Despesas</div><div class="value" id="b-despesas">R$ 0,00</div><div class="sub">Saídas registradas</div></div>
-        <div class="card"><div class="label">Líquido</div><div class="value" id="b-liquido">R$ 0,00</div><div class="sub">Bruto menos despesas</div></div>
-        <div class="card"><div class="label">Total de sacos</div><div class="value" id="b-sacos">0</div><div class="sub">Escamas + filtrado</div></div>
+        <div class="card highlight" role="button" tabindex="0" data-book="bruto"><div class="label">Bruto</div><div class="value" id="b-bruto">R$ 0,00</div><div class="sub">Total vendido no período</div></div>
+        <div class="card" role="button" tabindex="0" data-book="despesas"><div class="label">Despesas</div><div class="value" id="b-despesas">R$ 0,00</div><div class="sub">Saídas registradas</div></div>
+        <div class="card" role="button" tabindex="0" data-book="liquido"><div class="label">Líquido</div><div class="value" id="b-liquido">R$ 0,00</div><div class="sub">Bruto menos despesas</div></div>
+        <div class="card" role="button" tabindex="0" data-book="sacos"><div class="label">Total de sacos</div><div class="value" id="b-sacos">0</div><div class="sub">Escamas + filtrado</div></div>
       </div>
       <div class="metric-row">
-        <div class="card"><div class="label">❄ Escamas</div><div class="value" id="b-escamas">0</div><div class="sub" id="b-escamas-value">R$ 0,00</div></div>
-        <div class="card"><div class="label">◈ Filtrado</div><div class="value" id="b-filtrado">0</div><div class="sub" id="b-filtrado-value">R$ 0,00</div></div>
-        <div class="card"><div class="label">Pagamentos</div><div class="sub" style="font-size:15px;line-height:2"><b id="b-dinheiro">R$ 0,00</b> dinheiro<br><b id="b-pix">R$ 0,00</b> PIX<br><b id="b-fiado">R$ 0,00</b> fiado</div></div>
+        <div class="card" role="button" tabindex="0" data-book="escamas"><div class="label">❄ Escamas</div><div class="value" id="b-escamas">0</div><div class="sub" id="b-escamas-value">R$ 0,00</div></div>
+        <div class="card" role="button" tabindex="0" data-book="filtrado"><div class="label">◈ Filtrado</div><div class="value" id="b-filtrado">0</div><div class="sub" id="b-filtrado-value">R$ 0,00</div></div>
+        <div class="card" role="button" tabindex="0" data-book="pagamentos"><div class="label">Pagamentos</div><div class="sub" style="font-size:15px;line-height:2"><b id="b-dinheiro">R$ 0,00</b> dinheiro<br><b id="b-pix">R$ 0,00</b> PIX<br><b id="b-fiado">R$ 0,00</b> fiado</div></div>
       </div>
       <div class="table-card">
         <div class="table-head"><strong>Histórico por dia</strong><small id="days-count"></small></div>
@@ -183,7 +185,8 @@ button,input,select{font:inherit}button{cursor:pointer}
 
 <div class="modal-back" id="expense-modal"><div class="modal"><h3>Registrar saída</h3><div class="modal-grid">
   <div class="field full"><label>Descrição</label><input id="e-desc" placeholder="Ex.: GNV, Tafarel, Maíra, lanche"></div>
-  <div class="field full"><label>Ajudante (somente quando for pagamento de ajudante)</label><select id="e-helper"><option value="">Não é pagamento de ajudante</option><option value="Tafarel">Tafarel (Luciano)</option><option value="Maíra">Maíra (Flávio)</option><option value="both">Tafarel e Maíra</option></select></div>
+  <div class="field full"><label>Tipo de despesa</label><select id="e-category"><option value="loja">Despesas da Loja</option><option value="pessoal">Minhas Despesas</option></select></div>
+  <div class="field full" id="e-helper-field"><label>Ajudante (quando for pagamento de ajudante)</label><select id="e-helper"><option value="">Não é pagamento de ajudante</option><option value="Tafarel">Tafarel (Luciano)</option><option value="Maíra">Maíra (Flávio)</option><option value="both">Tafarel e Maíra</option></select></div>
   <div class="field full hidden" id="helper-split"><label>Quanto recebeu cada um? Os dois valores devem somar a saída.</label><div class="modal-grid"><div class="field"><label>Tafarel (R$)</label><input type="number" min="0" step=".01" id="e-tafarel"></div><div class="field"><label>Maíra (R$)</label><input type="number" min="0" step=".01" id="e-maira"></div></div></div>
   <div class="field"><label>Valor</label><input id="e-amount" type="number" min="0" step=".01"></div>
   <div class="field"><label>Data</label><input id="e-date" type="date"></div>
@@ -201,7 +204,7 @@ let state={sales:[],expenses:[],period:'day'};
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200)}
 function closeModal(id){$(id).classList.remove('show')}
 function openSale(){$('s-client').value='';$('s-qty').value=1;$('s-type').value='esc';$('s-payment').value='Dinheiro';$('s-price').value=7;$('s-date').value=$('date-vendas').value||today();$('s-time').value=nowTime();$('sale-modal').classList.add('show')}
-function openExpense(){$('e-helper').value='';$('helper-split').classList.add('hidden');$('e-tafarel').value='';$('e-maira').value='';$('e-desc').value='';$('e-amount').value='';$('e-date').value=$('date-saidas').value||today();$('e-time').value=nowTime();$('expense-modal').classList.add('show')}
+function openExpense(){$('e-category').value='loja';$('e-helper-field').classList.remove('hidden');$('e-helper').value='';$('helper-split').classList.add('hidden');$('e-tafarel').value='';$('e-maira').value='';$('e-desc').value='';$('e-amount').value='';$('e-date').value=$('date-saidas').value||today();$('e-time').value=nowTime();$('expense-modal').classList.add('show')}
 
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 function showView(v){
@@ -348,6 +351,45 @@ function renderClientHistory(){
   }).join('');
   el.querySelectorAll('[data-client-index]').forEach(b=>b.addEventListener('click',()=>toggleClientHistory(allNames[Number(b.dataset.clientIndex)])));
 }
+
+function classifyExpense(x){
+ const d=String(x.description||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ if(d.startsWith('[pessoal]'))return 'pessoal';
+ if(d.startsWith('[loja]'))return 'loja';
+ if(/\b(tafarel|maira|luciano|flavio|ajudante|gnv|ensacar|sacos de gelo|saco para gelo|maquina|manutencao|pecas|obra|terreno)\b/.test(d))return 'loja';
+ if(/\b(etanol|alcool|gasolina|mercado|lanche|comida|restaurante|roupa|passeio|viagem|bar|bebida|uber|acai)\b/.test(d))return 'pessoal';
+ return 'indefinida';
+}
+function expenseLabel(x){return String(x.description||'').replace(/^\[(?:PESSOAL|LOJA)\]\s*/i,'')}
+function expenseBreakdown(rows){return {loja:sum(rows.filter(x=>classifyExpense(x)==='loja'),'amount'),pessoal:sum(rows.filter(x=>classifyExpense(x)==='pessoal'),'amount'),indefinida:sum(rows.filter(x=>classifyExpense(x)==='indefinida'),'amount')}}
+function openBookDetail(kind){
+ const ref=$('date-caderno').value||today(),[a,b]=periodRange(ref,state.period);
+ const sales=state.sales.filter(x=>inRange(x,a,b,'sold')).slice().sort((x,y)=>new Date(x.sold_at)-new Date(y.sold_at));
+ const expenses=state.expenses.filter(x=>inRange(x,a,b,'spent')).slice().sort((x,y)=>new Date(x.spent_at)-new Date(y.spent_at));
+ const totals=saleTotals(sales),spent=sum(expenses,'amount'),breakdown=expenseBreakdown(expenses);
+ const titles={bruto:'Todas as vendas',despesas:'Detalhes das despesas',liquido:'Resultado financeiro',sacos:'Total de sacos',escamas:'Gelo em escamas',filtrado:'Gelo filtrado',pagamentos:'Pagamentos'};
+ if(!titles[kind])return;
+ const line=(label,value)=>'<div class="detail-line"><span>'+label+'</span><strong>'+money(value)+'</strong></div>';
+ const salesList=rows=>rows.length?rows.map(x=>'<div class="detail-line"><div><b>'+escapeHtml(x.client)+'</b><small>'+localDateOf(x.sold_at).split('-').reverse().join('/')+' · '+localTimeOf(x.sold_at)+' · '+Number(x.qty||0)+' saco(s) · '+(x.product_type==='filt'?'Filtrado':'Escamas')+' · '+escapeHtml(x.payment)+'</small></div><b>'+money(x.total_value)+'</b></div>').join(''):'<div class="empty">Sem vendas no período.</div>';
+ const expensesList=rows=>rows.length?rows.map(x=>'<div class="detail-line"><div><b>'+escapeHtml(expenseLabel(x))+'</b><small>'+localDateOf(x.spent_at).split('-').reverse().join('/')+' · '+(classifyExpense(x)==='loja'?'Loja':classifyExpense(x)==='pessoal'?'Pessoal':'Não classificada')+'</small></div><b>'+money(x.amount)+'</b></div>').join(''):'<div class="empty">Sem despesas no período.</div>';
+ let html='';
+ if(kind==='despesas'){
+  html=line('Despesas brutas',spent)+line('Despesas da loja',breakdown.loja)+line('Minhas despesas',breakdown.pessoal);
+  if(breakdown.indefinida)html+=line('Não classificadas',breakdown.indefinida);
+  html+='<h4>Despesas registradas</h4>'+expensesList(expenses);
+ }else if(kind==='liquido'){
+  html=line('Bruto',totals.bruto)+line('Despesas da loja',breakdown.loja)+line('Minhas despesas',breakdown.pessoal);
+  if(breakdown.indefinida)html+=line('Não classificadas',breakdown.indefinida);
+  html+=line('Resultado da loja (antes das despesas não classificadas)',totals.bruto-breakdown.loja)+line('Resultado geral',totals.bruto-spent)+line('Dinheiro',totals.din)+line('PIX',totals.pix)+line('Fiado',totals.fiado);
+ }else if(kind==='pagamentos'){
+  html=['Dinheiro','PIX','Fiado'].map(method=>'<h4>'+method+'</h4>'+salesList(sales.filter(x=>x.payment===method))).join('');
+ }else{
+  const rows=kind==='escamas'?sales.filter(x=>x.product_type==='esc'):kind==='filtrado'?sales.filter(x=>x.product_type==='filt'):sales;
+  html=salesList(rows)+'<div class="detail-total"><span>'+sum(rows,'qty')+' saco(s)</span><span>'+money(sum(rows,'total_value'))+'</span></div>';
+ }
+ $('detail-title').textContent=titles[kind];$('detail-body').innerHTML=html;$('detail-modal').classList.add('show');
+}
+
 function renderBook(){
   const ref=$('date-caderno').value||today(),[a,b]=periodRange(ref,state.period);
   const sales=state.sales.filter(x=>inRange(x,a,b,'sold')),expenses=state.expenses.filter(x=>inRange(x,a,b,'spent')),t=saleTotals(sales),desp=sum(expenses,'amount');
@@ -396,7 +438,7 @@ function renderHelpers(){
 function renderExpenses(){
   const d=$('date-saidas').value,rows=state.expenses.filter(x=>localDateOf(x.spent_at)===d).sort((a,b)=>new Date(a.spent_at)-new Date(b.spent_at));
   $('e-total').textContent=money(sum(rows,'amount'));$('expense-count').textContent=rows.length+' registro(s)';
-  $('expense-body').innerHTML=rows.map(x=>`<tr><td>${localTimeOf(x.spent_at)}</td><td><strong>${escapeHtml(x.description)}</strong></td><td>${money(x.amount)}</td><td><button class="ghost danger" onclick="deleteExpense('${x.id}')">Excluir</button></td></tr>`).join('');
+  $('expense-body').innerHTML=rows.map(x=>`<tr><td>${localTimeOf(x.spent_at)}</td><td><strong>${escapeHtml(expenseLabel(x))}</strong></td><td>${money(x.amount)}</td><td><button class="ghost danger" onclick="deleteExpense('${x.id}')">Excluir</button></td></tr>`).join('');
   $('expense-empty').classList.toggle('hidden',rows.length>0);$('expense-body').parentElement.classList.toggle('hidden',rows.length===0);renderHelpers();
 }
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});if(r.status===401){location.href='/__panel/login';throw new Error('Sessão encerrada')}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Erro no servidor');return j}
@@ -411,9 +453,9 @@ async function saveSale(){
 let savingExpense=false;
 async function saveExpense(){
   if(savingExpense)return;
-  const description=$('e-desc').value.trim(),amount=Number($('e-amount').value),date=$('e-date').value,time=$('e-time').value;
+  const description=$('e-desc').value.trim(),amount=Number($('e-amount').value),date=$('e-date').value,time=$('e-time').value,category=$('e-category').value;
   if(!description||!Number.isFinite(amount)||amount<=0)return toast('Informe descrição e valor.');
-  let h=$('e-helper').value||helperFromDescription(description);
+  let h=category==='loja'?($('e-helper').value||helperFromDescription(description)):'';
   if(!h&&/\bajudante(s)?\b/i.test(description)){
     const pick=prompt('Qual ajudante recebeu? Digite 1 para Tafarel, 2 para Maíra, ou 3 para os dois.');
     if(pick===null)return;
@@ -429,6 +471,7 @@ async function saveExpense(){
     payments=[{description:'Ajudante Tafarel · '+description,amount:t},{description:'Ajudante Maíra · '+description,amount:m}];
   }else if(h){payments=[{description:'Ajudante '+h+' · '+description,amount}];}
   else payments=[{description,amount}];
+  payments=payments.map(p=>({...p,description:(category==='pessoal'?'[PESSOAL] ':'[LOJA] ')+p.description}));
   savingExpense=true;
   let completed=0;
   try{
@@ -449,9 +492,11 @@ $('sales-expand-toggle').addEventListener('click',()=>{
 });
 $('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);$('helpers-month').addEventListener('change',renderHelpers);
 $('e-helper').addEventListener('change',toggleHelperSplit);
+$('e-category').addEventListener('change',()=>{const personal=$('e-category').value==='pessoal';$('e-helper-field').classList.toggle('hidden',personal);if(personal){$('e-helper').value='';toggleHelperSplit()}});
 $('e-desc').addEventListener('input',()=>{const h=helperFromDescription($('e-desc').value);if(h){$('e-helper').value=h;toggleHelperSplit()}});
 document.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{state.period=b.dataset.period;document.querySelectorAll('[data-period]').forEach(x=>x.classList.toggle('active',x===b));renderBook()});
 $('s-type').addEventListener('change',()=>{$('s-price').value=$('s-type').value==='filt'?13:7});
+document.querySelectorAll('#view-caderno [data-book]').forEach(card=>{const run=()=>openBookDetail(card.dataset.book);card.addEventListener('click',run);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();run()}})});
 const t=today();$('date-vendas').value=t;$('date-caderno').value=t;$('date-saidas').value=t;$('helpers-month').value=t.slice(0,7);
 
 function openHashView(){
