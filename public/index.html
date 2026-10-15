@@ -156,7 +156,7 @@ button,input,select{font:inherit}button{cursor:pointer}
     <section id="view-saidas" class="hidden">
       <div class="hero"><div><div class="eyebrow">CONTROLE DE DESPESAS</div><h2>Despesas</h2></div><button class="primary" onclick="openExpense()">＋ &nbsp;Registrar saída</button></div>
       <div class="filters"><div class="field"><label>Dia</label><input id="date-saidas" type="date"></div></div>
-      <div class="table-card" id="helpers-card"><div class="table-head"><strong>Histórico dos Ajudantes</strong><div class="field"><label for="helpers-month">Mês</label><input id="helpers-month" type="month"></div></div><div style="padding:20px 24px"><div class="cards" id="helpers-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:0"></div></div></div>
+      <div class="table-card" id="helpers-card"><div class="table-head"><strong>Histórico dos Ajudantes</strong><div class="field"><label for="helpers-month">Mês</label><input id="helpers-month" type="month"></div></div><div style="padding:20px 24px"><div class="cards" id="helpers-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px"></div><div class="card" style="min-height:0;padding:18px 20px;background:var(--soft2)"><div class="label" style="margin-bottom:10px">Ajudantes Total Bruto</div><div class="value" id="helpers-total" style="font-size:clamp(25px,6vw,36px)">R$ 0,00</div><div class="sub" id="helpers-total-caption">Tafarel + Maíra no mês selecionado</div></div></div></div>
       <div class="section-title"><h3>Despesas do dia</h3><small id="expense-count">0 registros</small></div>
       <div class="cards secondary">
         <div class="card highlight"><div class="label">Total de saídas</div><div class="value" id="e-total">R$ 0,00</div><div class="sub">Somatório do dia selecionado</div></div>
@@ -421,6 +421,7 @@ function renderHelpers(){
     const h=helperFromDescription(x.description);
     if(h==='Tafarel'||h==='Maíra')entries[h].push({date,amount:Number(x.amount)||0});
   });
+  $('helpers-total').textContent=money(sum(entries.Tafarel,'amount')+sum(entries['Maíra'],'amount'));
   $('helpers-summary').innerHTML=helpers.map(h=>{
     const e=entries[h],dates=[...new Set(e.map(x=>x.date))].sort().reverse(),opened=openHelperCard===h;
     const details=opened?'<div class="helper-card-days">'+(dates.length?dates.map(date=>{
