@@ -8,7 +8,7 @@ const TOKEN=String(process.env.GELO_CONTROL_TOKEN||"");
 
 app.use(express.static(path.join(__dirname,"public"),{
   setHeaders(res,file){
-    if(/manifest|sw\.js$/.test(file))res.setHeader("Cache-Control","no-cache");
+    if(/\.html$|manifest|sw\.js$/.test(file))res.setHeader("Cache-Control","no-store, max-age=0");
   }
 }));
 
@@ -34,5 +34,5 @@ app.use("/api/controle",async(req,res)=>{
 });
 
 app.get("/health",(req,res)=>res.json({ok:true,app:"gelo-tutoia-controle"}));
-app.use((req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+app.use((req,res)=>{res.setHeader("Cache-Control","no-store, max-age=0");res.sendFile(path.join(__dirname,"public","index.html"));});
 app.listen(PORT,()=>console.log("Gelo Tutoia Controle online na porta",PORT));
