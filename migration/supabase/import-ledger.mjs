@@ -79,5 +79,36 @@ try {
     for(let i=0;i<rows.length;i+=200)await request(table,'POST',rows.slice(i,i+200));
     console.log(table+': enviados '+rows.length+' registros (duplicados preservados sem sobrescrever)');
   }
-  console.log('Importação finalizada. Confira a contagem e totais no Supabase antes de trocar o aplicativo.');
+  // A conferência final consulta o banco de destino; nenhum corte de serviço é automático.
+  async function fetchAll(table){
+    const all=[];
+    for(let offset=0;;offset+=500){
+      const res=await fetch(url+'/rest/v1/'+table+'?select=*&order=id.asc&offset='+offset+'&limit=500',{
+        headers:{apikey:key,Authorization:'Bearer '+key}
+      });
+      if(!res.ok)throw Error('Erro ao conferir '+table+': HTTP '+res.status);
+      const page=await res.json();
+      all.push(...page);
+      if(page.length<500)break;
+    }
+    return all;
+  }
+  const [remoteSales,remoteExpenses]=await Promise.all([
+    fetchAll('gelo_control_sales'),fetchAll('gelo_control_expenses')
+  ]);
+  const remoteSalesMap=new Map(remoteSales.map(r=>[r.id,r]));
+  const remoteExpensesMap=new Map(remoteExpenses.map(r=>[r.id,r]));
+  const problems=[];
+  for(const x of sales){
+    const y=remoteSalesMap.get(x.id);
+    if(!y||String(y.status)!==String(x.status)||Math.abs(Number(y.total_value)-x.total_value)>0.001)problems.push('venda: '+x.id);
+  }
+  for(const x of expenses){
+    const y=remoteExpensesMap.get(x.id);
+    if(!y||String(y.status)!==String(x.status)||Math.abs(Number(y.amount)-x.amount)>0.001)problems.push('despesa: '+x.id);
+  }
+  if(problems.length){console.error('Divergências entre origem e destino:',problems.slice(0,20));exit(1)}
+  console.log('CONFERÊNCIA OK: '+sales.length+' vendas e '+expenses.length+' despesas do backup presentes no Supabase.');
+  console.log('Observação: novos lançamentos feitos na Railway após o backup precisam de sincronização final antes do corte.');
+  console.log('Importação finalizada. NÃO desligue a Railway até a sincronização final e o teste do novo app.');
 }catch(e){console.error('Importação interrompida:',e.message);exit(1)}
