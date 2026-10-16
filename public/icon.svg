@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#f3c55f"/><g fill="none" stroke="#283028" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"><path d="M256 105v302M125 181l262 150M125 331l262-150"/><path d="M256 105l-38 39M256 105l38 39M256 407l-38-39M256 407l38-39"/><path d="M125 181l50 9M125 181l17 48M387 331l-50-9M387 331l-17-48"/><path d="M125 331l50-9M125 331l17-48M387 181l-50 9M387 181l-17 48"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gelo Tutóia: floco de neve">
+<rect x="0" y="0" width="512" height="512" rx="114" fill="#f8d36d"/>
+<g fill="none" stroke="#242822" stroke-linecap="round" stroke-linejoin="round" stroke-width="25">
+<path d="M256 105V407M125 180L387 332M125 332L387 180"/>
+<path d="M214 139L256 170L298 139M214 373L256 342L298 373"/>
+<path d="M164 165L181 213L129 222M348 347L331 299L383 290"/>
+<path d="M129 290L181 299L164 347M383 222L331 213L348 165"/>
+</g></svg>
