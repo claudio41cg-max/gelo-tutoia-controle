@@ -1,3 +1,11 @@
+## Estado verificado em 15/10/2026
+- Cópia consolidada do SQLite passou em PRAGMA integrity_check.
+- Importação no Supabase eebkuiivyolszarnpjkx concluída: 240 vendas ativas (R$ 6.529,00) e 50 despesas ativas (R$ 2.567,00).
+- IDs distintos confirmados: 240 vendas e 50 despesas; datas de 01/10/2026 a 15/10/2026.
+- Dados foram importados por conexão administrativa segura; arquivo SQL privado NÃO está no GitHub.
+- ATENÇÃO: a origem Railway segue em uso. É necessário sincronizar lançamentos posteriores ao snapshot antes de redirecionar o aplicativo.
+- Falta implementar autenticação, API de leitura/escrita e hospedagem antes da troca. NÃO desligar a Railway.
+
 # Procedimento de migração controlada — Gelo Tutóia Controle
 
 ## Estado inicial
