@@ -39,11 +39,12 @@ try {
   sales=backup.sales.map(x=>{
     const qty=numeric(x.qty,'qty'),unit=numeric(x.unit_price,'unit_price'),total=numeric(x.total_value,'total_value');
     if(!Number.isInteger(qty)||qty<=0||unit<0||total<0) throw Error('Venda inválida '+x.id);
+    if(!['esc','filt'].includes(x.product_type))throw Error('Tipo de gelo inválido: '+x.id);
     return {
       id:x.id,message_id:x.message_id??null,sold_ms:ms(x.sold_at),sold_at:new Date(ms(x.sold_at)).toISOString(),
       client:String(x.client||''),qty,product_type:x.product_type,payment:x.payment,
       unit_price:unit,total_value:total,source:String(x.source||'migration'),
-      status:'active',created_ms:Date.now(),updated_ms:Date.now()
+      status:x.status==='deleted'?'deleted':'active',created_ms:Number(x.created_ms)||Date.now(),updated_ms:Number(x.updated_ms)||Date.now()
     };
   });
   expenses=backup.expenses.map(x=>{
@@ -51,7 +52,7 @@ try {
     if(amount<=0||!String(x.description||'').trim())throw Error('Despesa inválida '+x.id);
     return {id:x.id,spent_ms:ms(x.spent_at),spent_at:new Date(ms(x.spent_at)).toISOString(),
       description:x.description,amount,source:String(x.source||'migration'),
-      status:'active',created_ms:Date.now(),updated_ms:Date.now()};
+      status:x.status==='deleted'?'deleted':'active',created_ms:Number(x.created_ms)||Date.now(),updated_ms:Number(x.updated_ms)||Date.now()};
   });
 } catch(e){console.error('Falha de validação:',e.message);exit(2)}
 const round=x=>Math.round((x+Number.EPSILON)*100)/100;
