@@ -105,7 +105,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 
   <main class="main">
     <section id="view-vendas">
-      <div class="hero"><div><div class="eyebrow">BOM TRABALHO, CLÁUDIO</div><h2>Cada venda,<br>na conta.</h2><p>Confira suas entregas e feche o dia com tudo em ordem.</p></div><button class="primary" onclick="openSale()">＋ &nbsp;Registrar venda</button></div>
+      <div class="hero"><div><div class="eyebrow">BOM TRABALHO, CLÁUDIO</div><h2>Vendas diárias</h2></div><button class="primary" onclick="openSale()">＋ &nbsp;Registrar venda</button></div>
       <div class="filters">
         <div class="field"><label>Dia de trabalho</label><input id="date-vendas" type="date"></div>
       </div>
@@ -499,7 +499,8 @@ const geloLoginStyle=document.createElement('style');
 geloLoginStyle.textContent='#gelo-auth{position:fixed;inset:0;background:#f7f5ef;z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px}#gelo-auth[hidden]{display:none}#gelo-auth section{background:white;padding:22px;border-radius:22px;max-width:420px;width:100%;box-shadow:0 6px 32px #0001}#gelo-auth input,#gelo-auth button{display:block;width:100%;margin:10px 0;box-sizing:border-box;padding:12px}#gelo-auth .message{font-size:14px;white-space:pre-wrap}';
 document.head.appendChild(geloLoginStyle);
 const geloAuth=document.createElement('div');geloAuth.id='gelo-auth';geloAuth.innerHTML='<section><h2>Gelo Tutóia — teste Supabase</h2><p>Área de teste: não altera as vendas na Railway.</p><input id="gelo-email" type="email" placeholder="Seu e-mail"><button id="gelo-send" type="button">Enviar código por e-mail</button><input id="gelo-code" inputmode="numeric" placeholder="Código recebido" hidden><button id="gelo-verify" type="button" hidden>Confirmar código</button><p class="message" id="gelo-auth-msg">Acesso restrito à conta autorizada.</p></section>';
-document.body.appendChild(geloAuth);
+geloAuth.hidden=true; // Não piscar login antes da verificação de sessão
+ document.body.appendChild(geloAuth);
 const authMsg=document.getElementById('gelo-auth-msg');
 async function geloInit(){
   const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2');
@@ -525,7 +526,7 @@ async function geloInit(){
   };
   await verifyOwner();
 }
-geloInit().catch(e=>{authMsg.textContent='Falha ao conectar: '+e.message;});
+geloInit().catch(e=>{geloAuth.hidden=false;authMsg.textContent='Falha ao conectar: '+e.message;});
 async function loadAll(){
   try{const [s,e]=await Promise.all([api('/api/controle/sales'),api('/api/controle/expenses')]);state.sales=s.sales||[];state.expenses=e.expenses||[];renderSales();renderBook();renderExpenses()}catch(e){toast(e.message)}
 }
