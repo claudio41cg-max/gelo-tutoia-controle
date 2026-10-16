@@ -445,7 +445,87 @@ function renderExpenses(){
   $('expense-body').innerHTML=rows.map(x=>`<tr><td>${localTimeOf(x.spent_at)}</td><td><strong>${escapeHtml(expenseLabel(x))}</strong></td><td>${money(x.amount)}</td><td><button class="ghost danger" onclick="deleteExpense('${x.id}')">Excluir</button></td></tr>`).join('');
   $('expense-empty').classList.toggle('hidden',rows.length>0);$('expense-body').parentElement.classList.toggle('hidden',rows.length===0);renderHelpers();
 }
-async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});if(r.status===401){location.href='/__panel/login';throw new Error('Sessão encerrada')}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Erro no servidor');return j}
+// Somente ramificação de testes: usa conta autenticada + RLS do Supabase.
+let geloDb=null;
+const GELO_SUPABASE_URL='https://eebkuiivyolszarnpjkx.supabase.co';
+const GELO_SUPABASE_PUBLISHABLE='sb_publishable_P_gbUJOnu80Ix38PtwnGgg_MNp1bmZS';
+const GELO_TABLE={sales:'gelo_control_sales',expenses:'gelo_control_expenses'};
+async function api(url,opts={}){
+  if(!geloDb)throw Error('Entre com seu e-mail para acessar o banco de testes.');
+  const {data:{user}}=await geloDb.auth.getUser();
+  if(!user)throw Error('Sessão encerrada. Faça login novamente.');
+  const kind=url.includes('/expenses')?'expenses':'sales',table=GELO_TABLE[kind];
+  const verb=(opts.method||'GET').toUpperCase();
+  let data,error;
+  if(verb==='GET'){
+    ({data,error}=await geloDb.from(table).select('*').eq('status','active').order(kind==='sales'?'sold_at':'spent_at',{ascending:true}));
+    if(error)throw Error(error.message);
+    return {[kind]:data||[],ok:true};
+  }
+  if(verb==='DELETE'){
+    const id=decodeURIComponent(url.substring(url.lastIndexOf('/')+1));
+    ({data,error}=await geloDb.from(table).update({status:'deleted',updated_ms:Date.now()}).eq('id',id).select('id'));
+    if(error)throw Error(error.message);
+    if(!data?.length)throw Error('Registro não encontrado ou sem permissão');
+    return {ok:true,changed:data.length};
+  }
+  if(verb==='POST'){
+    const b=JSON.parse(opts.body||'{}');
+    const dt=b.date||new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+    const tm=b.time||new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+    const timestamp=b.sold_at||b.spent_at||dt+'T'+tm+':00-03:00',iso=new Date(timestamp).toISOString(),ms=Date.parse(iso),now=Date.now();
+    if(!Number.isFinite(ms))throw Error('Data ou hora inválida');
+    let record;
+    if(kind==='sales'){
+      const qty=Number(b.qty),price=Number(b.unit_price);
+      if(!b.client||!Number.isInteger(qty)||qty<1||!Number.isFinite(price)||price<0)throw Error('Venda inválida');
+      record={id:'manual:'+crypto.randomUUID(),message_id:'',sold_ms:ms,sold_at:iso,client:b.client,qty,
+        product_type:b.product_type==='filt'?'filt':'esc',payment:b.payment||'Dinheiro',
+        unit_price:price,total_value:Math.round(price*qty*100)/100,source:'supabase-pwa',
+        status:'active',created_ms:now,updated_ms:now};
+    }else{
+      const amount=Number(b.amount);
+      if(!b.description||!Number.isFinite(amount)||amount<=0)throw Error('Despesa inválida');
+      record={id:'expense:'+crypto.randomUUID(),spent_ms:ms,spent_at:iso,description:b.description,amount,
+        source:'supabase-pwa',status:'active',created_ms:now,updated_ms:now};
+    }
+    ({data,error}=await geloDb.from(table).insert(record).select('id').single());
+    if(error)throw Error(error.message);
+    return {ok:true,id:data.id};
+  }
+  throw Error('Operação não suportada');
+}
+const geloLoginStyle=document.createElement('style');
+geloLoginStyle.textContent='#gelo-auth{position:fixed;inset:0;background:#f7f5ef;z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px}#gelo-auth[hidden]{display:none}#gelo-auth section{background:white;padding:22px;border-radius:22px;max-width:420px;width:100%;box-shadow:0 6px 32px #0001}#gelo-auth input,#gelo-auth button{display:block;width:100%;margin:10px 0;box-sizing:border-box;padding:12px}#gelo-auth .message{font-size:14px;white-space:pre-wrap}';
+document.head.appendChild(geloLoginStyle);
+const geloAuth=document.createElement('div');geloAuth.id='gelo-auth';geloAuth.innerHTML='<section><h2>Gelo Tutóia — teste Supabase</h2><p>Área de teste: não altera as vendas na Railway.</p><input id="gelo-email" type="email" placeholder="Seu e-mail"><button id="gelo-send" type="button">Enviar código por e-mail</button><input id="gelo-code" inputmode="numeric" placeholder="Código recebido" hidden><button id="gelo-verify" type="button" hidden>Confirmar código</button><p class="message" id="gelo-auth-msg">Acesso restrito à conta autorizada.</p></section>';
+document.body.appendChild(geloAuth);
+const authMsg=document.getElementById('gelo-auth-msg');
+async function geloInit(){
+  const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2');
+  geloDb=createClient(GELO_SUPABASE_URL,GELO_SUPABASE_PUBLISHABLE);
+  async function verifyOwner(){
+    const {data:{user}}=await geloDb.auth.getUser();
+    if(!user){geloAuth.hidden=false;return;}
+    const {data,error}=await geloDb.from('gelo_owners').select('user_id').limit(1);
+    if(error||!data?.length){geloAuth.hidden=false;authMsg.textContent='Login realizado. Esta conta ainda não foi autorizada para acessar o Gelo Tutóia.';return;}
+    geloAuth.hidden=true;await loadAll();
+  }
+  document.getElementById('gelo-send').onclick=async()=>{
+    const email=document.getElementById('gelo-email').value.trim();
+    if(!email){authMsg.textContent='Informe seu e-mail';return}
+    authMsg.textContent='Solicitando código...';
+    const {error}=await geloDb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+    authMsg.textContent=error?error.message:'Confira seu e-mail e informe o código recebido.';
+    if(!error){document.getElementById('gelo-code').hidden=false;document.getElementById('gelo-verify').hidden=false;}
+  };
+  document.getElementById('gelo-verify').onclick=async()=>{
+    const {error}=await geloDb.auth.verifyOtp({email:document.getElementById('gelo-email').value.trim(),token:document.getElementById('gelo-code').value.trim(),type:'email'});
+    if(error){authMsg.textContent=error.message;return;}await verifyOwner();
+  };
+  await verifyOwner();
+}
+geloInit().catch(e=>{authMsg.textContent='Falha ao conectar: '+e.message;});
 async function loadAll(){
   try{const [s,e]=await Promise.all([api('/api/controle/sales'),api('/api/controle/expenses')]);state.sales=s.sales||[];state.expenses=e.expenses||[];renderSales();renderBook();renderExpenses()}catch(e){toast(e.message)}
 }
@@ -519,14 +599,9 @@ function openHashView(){
 window.addEventListener('hashchange',openHashView);
 openHashView();
 
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js',{scope:'/'})
-      .catch(err=>console.warn('PWA service worker:',err));
-  });
-}
+// Teste isolado: não registrar o service worker da versão antiga.
 
-loadAll();
+// Dados só carregam depois de autenticação e permissão.
 </script>
 </body>
 </html>
