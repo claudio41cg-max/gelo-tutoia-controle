@@ -89,6 +89,9 @@ button,input,select{font:inherit}button{cursor:pointer}
  .cards,.cards.secondary,.metric-row{grid-template-columns:1fr 1fr;gap:12px}.card{min-height:145px;padding:18px}.card .label{margin-bottom:18px}.card .value{font-size:29px}.cards.secondary .card:last-child{grid-column:1/-1}
  .section-title{align-items:flex-start;gap:8px}.section-title h3{font-size:22px}.daily{grid-template-columns:1fr 1fr}
 }
+
+/* Lista de cobranças independente do caixa e do histórico de vendas */
+#deferred-trigger{flex:0 0 auto;white-space:nowrap;border:0;background:#f2c35f;color:#292c27;border-radius:12px;padding:10px 13px;font-weight:800;font-size:14px;cursor:pointer}#deferred-number{font-size:12px} .crumb-inner>div:first-child{min-width:0;font-size:clamp(11px,2.9vw,14px)}.crumb-inner{align-items:center;gap:8px} .deferred-client{border:1px solid #dedfd8;border-radius:13px;padding:13px 14px;margin:10px 0;background:#f8f9f5;width:100%;text-align:left;font:inherit;cursor:pointer}.deferred-sale{border:1px solid #e1e2db;border-radius:13px;padding:13px;margin:9px 0}.deferred-sale small{color:#75786e;display:block;margin:6px 0}.deferred-sale button{border:0;border-radius:9px;background:#f2c35f;padding:9px 12px;font-weight:700}.deferred-paid{opacity:.75}
 </style>
 </head>
 <body>
@@ -101,7 +104,7 @@ button,input,select{font:inherit}button{cursor:pointer}
       <button data-view="saidas"><span class="ico">↗</span>Saídas</button>
     </nav>
   </header>
-  <div class="crumb"><div class="crumb-inner"><div>Gelo Tutóia &nbsp; / &nbsp; <b id="crumb-title">Vendas do dia</b></div><div class="saved"><span class="dot"></span>Banco central do Gelo Tutóia</div></div></div>
+  <div class="crumb"><div class="crumb-inner"><div>Gelo Tutóia &nbsp; / &nbsp; <b id="crumb-title">Vendas do dia</b></div><button id="deferred-trigger" type="button" onclick="openDeferred()" aria-label="Ver compras para pagar depois">Pagar depois <span id="deferred-number"></span></button></div></div>
 
   <main class="main">
     <section id="view-vendas">
@@ -165,6 +168,7 @@ button,input,select{font:inherit}button{cursor:pointer}
     </section>
   </main>
 </div>
+<div class="modal-back" id="deferred-modal" role="dialog" aria-modal="true" aria-labelledby="deferred-title"><div class="modal" style="max-height:88dvh;overflow:auto"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h3 id="deferred-title" style="margin:0">Pagar depois</h3><button type="button" class="ghost" onclick="closeModal('deferred-modal')" aria-label="Fechar">✕</button></div><div id="deferred-body" style="margin-top:18px"></div><div class="actions"><button type="button" class="cancel" onclick="closeModal('deferred-modal')">Fechar</button></div></div></div>
 
 <div class="modal-back" id="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
   <div class="modal" style="max-height:85dvh;overflow:auto">
@@ -177,7 +181,7 @@ button,input,select{font:inherit}button{cursor:pointer}
   <div class="field full"><label>Cliente</label><input id="s-client" placeholder="Nome do cliente"></div>
   <div class="field"><label>Tipo de gelo</label><select id="s-type"><option value="esc">Escamas</option><option value="filt">Filtrado</option></select></div>
   <div class="field"><label>Sacos</label><input id="s-qty" type="number" min="1" value="1"></div>
-  <div class="field"><label>Pagamento</label><select id="s-payment"><option>Dinheiro</option><option>PIX</option><option>Fiado</option></select></div>
+  <div class="field"><label>Pagamento</label><select id="s-payment"><option>Dinheiro</option><option>PIX</option><option>Fiado</option><option>Pagar depois</option><option>PIX pagar depois</option><option>Dinheiro pagar depois</option></select></div>
   <div class="field"><label>Preço por saco</label><input id="s-price" type="number" min="0" step=".01" value="7"></div>
   <div class="field"><label>Data</label><input id="s-date" type="date"></div>
   <div class="field"><label>Horário</label><input id="s-time" type="time"></div>
@@ -199,7 +203,9 @@ const $=id=>document.getElementById(id);
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const nowTime=()=>new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
-let state={sales:[],expenses:[],period:'day'};
+let state={sales:[],expenses:[],settlements:[],period:'day'};
+const isDeferred=x=>['fiado','pagar depois','pix pagar depois','dinheiro pagar depois'].includes(String(x.payment||'').trim().toLowerCase());
+const isPaid=x=>state.settlements.some(y=>y.sale_id===x.id);
 
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200)}
 function closeModal(id){$(id).classList.remove('show')}
@@ -219,7 +225,7 @@ function localTimeOf(iso){try{return new Intl.DateTimeFormat('pt-BR',{timeZone:'
 function sum(rows,key){return rows.reduce((a,x)=>a+Number(x[key]||0),0)}
 function saleTotals(rows){
   const esc=rows.filter(x=>x.product_type==='esc'),filt=rows.filter(x=>x.product_type==='filt');
-  const bruto=sum(rows,'total_value'),din=sum(rows.filter(x=>x.payment==='Dinheiro'),'total_value'),pix=sum(rows.filter(x=>x.payment==='PIX'),'total_value'),fiado=sum(rows.filter(x=>x.payment==='Fiado'),'total_value');
+  const bruto=sum(rows,'total_value'),din=sum(rows.filter(x=>x.payment==='Dinheiro'),'total_value'),pix=sum(rows.filter(x=>x.payment==='PIX'),'total_value'),fiado=sum(rows.filter(isDeferred),'total_value');
   return {bruto,din,pix,fiado,esc:sum(esc,'qty'),filt:sum(filt,'qty'),escv:sum(esc,'total_value'),filtv:sum(filt,'total_value'),sacos:sum(rows,'qty')}
 }
 function selectedDayRows(){
@@ -527,8 +533,56 @@ async function geloInit(){
   await verifyOwner();
 }
 geloInit().catch(e=>{geloAuth.hidden=false;authMsg.textContent='Falha ao conectar: '+e.message;});
+
+// Cobranças são marcadores: não mudam valores de venda, caixa ou despesas.
+function openDeferred(){renderDeferredList();$('deferred-modal').classList.add('show')}
+function updateDeferredBadge(){const pending=state.sales.filter(x=>isDeferred(x)&&!isPaid(x));$('deferred-number').textContent=pending.length?'('+pending.length+')':''}
+function deferredGroup(){
+ const map=new Map();
+ state.sales.filter(isDeferred).forEach(x=>{
+  const key=x.client.trim().toLocaleLowerCase('pt-BR');if(!map.has(key))map.set(key,{client:x.client,rows:[]});map.get(key).rows.push(x);
+ });
+ return [...map.values()].sort((a,b)=>a.client.localeCompare(b.client,'pt-BR'));
+}
+function renderDeferredList(){
+ const pending=state.sales.filter(x=>isDeferred(x)&&!isPaid(x));
+ const groups=deferredGroup().filter(g=>g.rows.some(x=>!isPaid(x)));
+ const body=$('deferred-body');
+ body.innerHTML='<p><strong>Total pendente: '+money(sum(pending,'total_value'))+'</strong> · '+pending.length+' compra(s)</p>'+
+ (groups.length?groups.map((g,i)=>{const open=g.rows.filter(x=>!isPaid(x));return '<button class="deferred-client" type="button" data-deferred-index="'+i+'"><strong>'+escapeHtml(g.client)+'</strong><span style="float:right">'+money(sum(open,'total_value'))+' ›</span><small style="display:block;color:#777">'+open.length+' compra(s) pendente(s)</small></button>'}).join(''):'<p>Nenhuma compra pendente.</p>');
+ body.querySelectorAll('[data-deferred-index]').forEach(el=>{el.onclick=()=>renderDeferredClient(groups[Number(el.dataset.deferredIndex)])});
+}
+function renderDeferredClient(group){
+ const pending=group.rows.filter(x=>!isPaid(x)).sort((a,b)=>new Date(a.sold_at)-new Date(b.sold_at));
+ const paid=group.rows.filter(isPaid).sort((a,b)=>new Date(b.sold_at)-new Date(a.sold_at));
+ const draw=(x,settled)=>'<article class="deferred-sale '+(settled?'deferred-paid':'')+'"><strong>'+escapeHtml(localDateOf(x.sold_at))+'</strong> · '+money(x.total_value)+
+ '<small>'+Number(x.qty)+' saco(s) · '+(x.product_type==='filt'?'Filtrado':'Escamas')+' · '+escapeHtml(x.payment)+'</small>'+
+ '<button type="button" data-settlement="'+escapeHtml(x.id)+'" data-action="'+(settled?'undo':'settle')+'">'+(settled?'Desfazer baixa':'Marcar esta compra como paga')+'</button></article>';
+ $('deferred-body').innerHTML='<button type="button" class="ghost" id="deferred-back">← Todos os clientes</button><h3>'+escapeHtml(group.client)+'</h3><p><strong>Falta receber: '+money(sum(pending,'total_value'))+'</strong></p>'+
+ pending.map(x=>draw(x,false)).join('')+(paid.length?'<details><summary>Compras já quitadas ('+paid.length+')</summary>'+paid.map(x=>draw(x,true)).join('')+'</details>':'');
+ $('deferred-back').onclick=renderDeferredList;
+ $('deferred-body').querySelectorAll('[data-settlement]').forEach(btn=>btn.onclick=async()=>{
+  const saleId=btn.dataset.settlement,action=btn.dataset.action;
+  const sale=state.sales.find(x=>x.id===saleId);
+  if(!sale)return;
+  if(!confirm(action==='settle'?'Marcar somente a compra de '+localDateOf(sale.sold_at)+' como paga? A venda original não será alterada.':'Reabrir esta compra como pendente?'))return;
+  btn.disabled=true;
+  try{
+   const {data:{user}}=await geloDb.auth.getUser();
+   const result=action==='settle'
+    ?await geloDb.from('gelo_deferred_settlements').insert({sale_id:saleId,settled_by:user.id})
+    :await geloDb.from('gelo_deferred_settlements').delete().eq('sale_id',saleId);
+   if(result.error)throw result.error;
+   const q=await geloDb.from('gelo_deferred_settlements').select('sale_id,settled_at');
+   if(q.error)throw q.error;state.settlements=q.data||[];
+   updateDeferredBadge();renderDeferredClient(group);
+   toast(action==='settle'?'Compra quitada, sem alterar o caixa.':'Baixa desfeita.');
+  }catch(e){btn.disabled=false;toast(e.message)}
+ });
+}
+
 async function loadAll(){
-  try{const [s,e]=await Promise.all([api('/api/controle/sales'),api('/api/controle/expenses')]);state.sales=s.sales||[];state.expenses=e.expenses||[];renderSales();renderBook();renderExpenses()}catch(e){toast(e.message)}
+  try{const [s,e,p]=await Promise.all([api('/api/controle/sales'),api('/api/controle/expenses'),geloDb.from('gelo_deferred_settlements').select('sale_id,settled_at')]);if(p.error)throw p.error;state.sales=s.sales||[];state.expenses=e.expenses||[];state.settlements=p.data||[];renderSales();renderBook();renderExpenses();updateDeferredBadge()}catch(e){toast(e.message)}
 }
 async function saveSale(){
   const body={client:$('s-client').value.trim(),product_type:$('s-type').value,qty:Number($('s-qty').value),payment:$('s-payment').value,unit_price:Number($('s-price').value),date:$('s-date').value,time:$('s-time').value};
