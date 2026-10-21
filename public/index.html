@@ -684,7 +684,7 @@ $('sales-expand-toggle').addEventListener('click',()=>{
  $('sales-expand-toggle').setAttribute('aria-expanded',String(opening));
  $('sales-expand-arrow').textContent=opening?'⌃':'⌄';
 });
-$('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);$('helpers-month').addEventListener('change',renderHelpers);
+$('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);$('helpers-month').addEventListener('change',()=>{renderHelpers();renderExpenses()});
 $('e-helper').addEventListener('change',toggleHelperSplit);
 $('e-category').addEventListener('change',()=>{const personal=$('e-category').value==='pessoal';$('e-helper-field').classList.toggle('hidden',personal);if(personal){$('e-helper').value='';toggleHelperSplit()}});
 $('e-desc').addEventListener('input',()=>{
