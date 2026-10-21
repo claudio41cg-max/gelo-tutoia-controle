@@ -92,6 +92,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 
 /* Lista de cobranças independente do caixa e do histórico de vendas */
 #deferred-trigger{flex:0 0 auto;white-space:nowrap;border:0;background:#f2c35f;color:#292c27;border-radius:12px;padding:10px 13px;font-weight:800;font-size:14px;cursor:pointer}#deferred-number{font-size:12px} .crumb-inner>div:first-child{min-width:0;font-size:clamp(11px,2.9vw,14px)}.crumb-inner{align-items:center;gap:8px} .deferred-client{border:1px solid #dedfd8;border-radius:13px;padding:13px 14px;margin:10px 0;background:#f8f9f5;width:100%;text-align:left;font:inherit;cursor:pointer}.deferred-sale{border:1px solid #e1e2db;border-radius:13px;padding:13px;margin:9px 0}.deferred-sale small{color:#75786e;display:block;margin:6px 0}.deferred-sale button{border:0;border-radius:9px;background:#f2c35f;padding:9px 12px;font-weight:700}.deferred-paid{opacity:.75}
+.expense-scope{display:grid;gap:8px}.expense-scope button,.expense-tabs button,.expense-category{font:inherit;cursor:pointer;border:1px solid #dedfd8;background:white;padding:13px;border-radius:12px;color:#292c27}.expense-scope button{display:flex;justify-content:space-between;gap:10px;text-align:left}.expense-scope .current,.expense-tabs .current{background:#eef0e4;border-color:#9fad91}.expense-tabs{display:flex;gap:8px;margin:18px 0}.expense-tabs button{flex:1;font-size:14px}.expense-category{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:8px 0;text-align:left}.expense-category small{display:block;color:#888;margin-top:5px}.expense-category strong{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -371,6 +372,52 @@ function classifyExpense(x){
 }
 function expenseLabel(x){return String(x.description||'').replace(/^\[(?:PESSOAL|LOJA(?: CONFIRMADA)?)\]\s*/i,'')}
 function expenseBreakdown(rows){return {loja:sum(rows.filter(x=>classifyExpense(x)==='loja'),'amount'),pessoal:sum(rows.filter(x=>classifyExpense(x)==='pessoal'),'amount'),indefinida:sum(rows.filter(x=>classifyExpense(x)==='indefinida'),'amount')}}
+
+const expenseExplorerState={rows:[],scope:'brutas',mode:'categorias',category:null};
+function expenseCat(x){
+ const label=expenseLabel(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+ // Cada lançamento pertence a exatamente uma categoria: somas nunca duplicadas.
+ if(/\b(tafarel|tafa|luciano)\b/.test(label)&&!/\b(maira|flavio)\b/.test(label))return 'Tafarel';
+ if(/\b(maira|flavio)\b/.test(label)&&!/\b(tafarel|tafa|luciano)\b/.test(label))return 'Maíra';
+ if(/\b(ajudant|tafarel|tafa|luciano|maira|flavio)\b/.test(label))return 'Ajudantes sem divisão';
+ if(/\bgnv\b/.test(label))return 'GNV';
+ if(/\b(etanol|alcool|gasolina|combustivel)\b/.test(label))return 'Combustível particular';
+ if(/\b(manuten|conserto|reparo|mecanico|oficina|oleo motor|pneu)\b/.test(label))return 'Manutenção';
+ if(/\b(obra|cimento|areia|tinta|ferragem|material eletrico|material de construcao|pedreiro)\b/.test(label))return 'Materiais de obras';
+ if(/\b(restaurante|lanchonete|almoco|jantar|lanche|churrascaria|bar |bar$|pizza|hamburguer)\b/.test(label))return 'Restaurantes e lanches';
+ if(/\b(mercado|supermercado|compras|fruta|peixe|camarao|refrigerante|refri|cerveja|pao|acai|coca|panetone|agua mineral|carne)\b/.test(label))return 'Mercado e compras';
+ return 'Outros gastos';
+}
+function renderExpenseExplorer(rows,scope='brutas'){
+ expenseExplorerState.rows=rows;
+ expenseExplorerState.scope=scope;
+ expenseExplorerState.mode='categorias';
+ expenseExplorerState.category=null;
+ return expenseExplorerHtml();
+}
+function expenseExplorerHtml(){
+ const q=expenseExplorerState,rows=q.rows.filter(x=>q.scope==='brutas'||classifyExpense(x)===q.scope);
+ const full=q.rows,types=[['brutas','Despesas brutas',sum(full,'amount')],['loja','Despesas da loja',sum(full.filter(x=>classifyExpense(x)==='loja'),'amount')],['pessoal','Minhas despesas',sum(full.filter(x=>classifyExpense(x)==='pessoal'),'amount')]];
+ const summary='<div class="expense-scope">'+types.map(([key,label,total])=>'<button type="button" data-ex-scope="'+key+'" class="'+(key===q.scope?'current':'')+'"><span>'+label+'</span><b>'+money(total)+'</b></button>').join('')+'</div>';
+ const tabs='<div class="expense-tabs"><button data-ex-mode="categorias" class="'+(q.mode==='categorias'?'current':'')+'">Por categorias</button><button data-ex-mode="lista" class="'+(q.mode==='lista'?'current':'')+'">Lista completa</button></div>';
+ const entry=x=>'<div class="detail-line"><div><b>'+escapeHtml(expenseLabel(x))+'</b><small>'+localDateOf(x.spent_at).split('-').reverse().join('/')+' · '+(classifyExpense(x)==='loja'?'Loja':'Pessoal')+'</small></div><strong>'+money(x.amount)+'</strong></div>';
+ const grouped=new Map();rows.forEach(x=>{const cat=expenseCat(x);if(!grouped.has(cat))grouped.set(cat,[]);grouped.get(cat).push(x)});
+ const categories=[...grouped.entries()].sort((a,b)=>sum(b[1],'amount')-sum(a[1],'amount'));
+ let detail='';
+ if(q.mode==='lista')detail='<h4>Todos os lançamentos ('+rows.length+')</h4>'+rows.map(entry).join('');
+ else if(q.category){const chosen=grouped.get(q.category)||[];detail='<button class="ghost" type="button" data-ex-back="1">← Voltar às categorias</button><h4>'+escapeHtml(q.category)+' · '+money(sum(chosen,'amount'))+'</h4>'+chosen.map(entry).join('')}
+ else detail='<h4>Categorias ('+categories.length+')</h4>'+categories.map(([cat,list])=>'<button type="button" class="expense-category" data-ex-category="'+escapeHtml(cat)+'"><span><b>'+escapeHtml(cat)+'</b><small>'+list.length+' lançamento(s)</small></span><strong>'+money(sum(list,'amount'))+' ›</strong></button>').join('');
+ return summary+tabs+'<div class="detail-total"><span>Total nesta seleção</span><strong>'+money(sum(rows,'amount'))+'</strong></div>'+detail;
+}
+function bindExpenseExplorer(){
+ const root=$('detail-body');
+ root.querySelectorAll('[data-ex-scope]').forEach(el=>el.onclick=()=>{expenseExplorerState.scope=el.dataset.exScope;expenseExplorerState.category=null;updateExpenseExplorer()});
+ root.querySelectorAll('[data-ex-mode]').forEach(el=>el.onclick=()=>{expenseExplorerState.mode=el.dataset.exMode;expenseExplorerState.category=null;updateExpenseExplorer()});
+ root.querySelectorAll('[data-ex-category]').forEach(el=>el.onclick=()=>{expenseExplorerState.category=el.dataset.exCategory;updateExpenseExplorer()});
+ const back=root.querySelector('[data-ex-back]');if(back)back.onclick=()=>{expenseExplorerState.category=null;updateExpenseExplorer()};
+}
+function updateExpenseExplorer(){$('detail-body').innerHTML=expenseExplorerHtml();bindExpenseExplorer()}
+
 function openBookDetail(kind){
  const ref=$('date-caderno').value||today(),[a,b]=periodRange(ref,state.period);
  const sales=state.sales.filter(x=>inRange(x,a,b,'sold')).slice().sort((x,y)=>new Date(x.sold_at)-new Date(y.sold_at));
@@ -383,9 +430,7 @@ function openBookDetail(kind){
  const expensesList=rows=>rows.length?rows.map(x=>'<div class="detail-line"><div><b>'+escapeHtml(expenseLabel(x))+'</b><small>'+localDateOf(x.spent_at).split('-').reverse().join('/')+' · '+(classifyExpense(x)==='loja'?'Loja':classifyExpense(x)==='pessoal'?'Pessoal':'Não classificada')+'</small></div><b>'+money(x.amount)+'</b></div>').join(''):'<div class="empty">Sem despesas no período.</div>';
  let html='';
  if(kind==='despesas'){
-  html=line('Despesas brutas',spent)+line('Despesas da loja',breakdown.loja)+line('Minhas despesas',breakdown.pessoal);
-  if(breakdown.indefinida)html+=line('Não classificadas',breakdown.indefinida);
-  html+='<h4>Despesas registradas</h4>'+expensesList(expenses);
+  html=renderExpenseExplorer(expenses,'brutas');
  }else if(kind==='liquido'){
   html=line('Bruto',totals.bruto)+line('Despesas da loja',breakdown.loja)+line('Minhas despesas',breakdown.pessoal);
   if(breakdown.indefinida)html+=line('Não classificadas',breakdown.indefinida);
@@ -396,7 +441,7 @@ function openBookDetail(kind){
   const rows=kind==='escamas'?sales.filter(x=>x.product_type==='esc'):kind==='filtrado'?sales.filter(x=>x.product_type==='filt'):sales;
   html=salesList(rows)+'<div class="detail-total"><span>'+sum(rows,'qty')+' saco(s)</span><span>'+money(sum(rows,'total_value'))+'</span></div>';
  }
- $('detail-title').textContent=titles[kind];$('detail-body').innerHTML=html;$('detail-modal').classList.add('show');
+ $('detail-title').textContent=titles[kind];$('detail-body').innerHTML=html;$('detail-modal').classList.add('show');if(kind==='despesas')bindExpenseExplorer();
 }
 
 function renderBook(){
