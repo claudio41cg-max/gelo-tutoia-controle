@@ -93,7 +93,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 /* Lista de cobranças independente do caixa e do histórico de vendas */
 #deferred-trigger{flex:0 0 auto;white-space:nowrap;border:0;background:#f2c35f;color:#292c27;border-radius:12px;padding:10px 13px;font-weight:800;font-size:14px;cursor:pointer}#deferred-number{font-size:12px} .crumb-inner>div:first-child{min-width:0;font-size:clamp(11px,2.9vw,14px)}.crumb-inner{align-items:center;gap:8px} .deferred-client{border:1px solid #dedfd8;border-radius:13px;padding:13px 14px;margin:10px 0;background:#f8f9f5;width:100%;text-align:left;font:inherit;cursor:pointer}.deferred-sale{border:1px solid #e1e2db;border-radius:13px;padding:13px;margin:9px 0}.deferred-sale small{color:#75786e;display:block;margin:6px 0}.deferred-sale button{border:0;border-radius:9px;background:#f2c35f;padding:9px 12px;font-weight:700}.deferred-paid{opacity:.75}
 .expense-scope{display:grid;gap:8px}.expense-scope button,.expense-tabs button,.expense-category{font:inherit;cursor:pointer;border:1px solid #dedfd8;background:white;padding:13px;border-radius:12px;color:#292c27}.expense-scope button{display:flex;justify-content:space-between;gap:10px;text-align:left}.expense-scope .current,.expense-tabs .current{background:#eef0e4;border-color:#9fad91}.expense-tabs{display:flex;gap:8px;margin:18px 0}.expense-tabs button{flex:1;font-size:14px}.expense-category{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:8px 0;text-align:left}.expense-category small{display:block;color:#888;margin-top:5px}.expense-category strong{white-space:nowrap}
-</style>
+.expense-general-card{display:flex;flex-direction:column;align-items:stretch;text-align:left;width:100%;margin:0 0 24px;min-height:0;gap:12px;padding:22px 26px;background:#eef0e4;border:1px solid #dedfd8;cursor:pointer}.expense-general-card .label{display:flex;justify-content:space-between;font-size:22px;font-weight:800}.expense-general-card strong{font-size:clamp(25px,6vw,36px)}.expense-general-card .sub{font-size:14px}</style>
 </head>
 <body>
 <div class="shell">
@@ -142,7 +142,7 @@ button,input,select{font:inherit}button{cursor:pointer}
       <div class="section-title"><h3 id="book-title">Resumo do dia</h3><small id="book-range"></small></div>
       <div class="cards">
         <div class="card highlight" role="button" tabindex="0" data-book="bruto"><div class="label">Bruto</div><div class="value" id="b-bruto">R$ 0,00</div><div class="sub">Total vendido no período</div></div>
-        <div class="card" role="button" tabindex="0" data-book="despesas"><div class="label">Despesas</div><div class="value" id="b-despesas">R$ 0,00</div><div class="sub">Saídas registradas</div></div>
+        <div class="card"><div class="label">Despesas</div><div class="value" id="b-despesas">R$ 0,00</div><div class="sub">Saídas registradas · detalhes na aba Saídas</div></div>
         <div class="card" role="button" tabindex="0" data-book="liquido"><div class="label">Líquido</div><div class="value" id="b-liquido">R$ 0,00</div><div class="sub">Bruto menos despesas</div></div>
         <div class="card" role="button" tabindex="0" data-book="sacos"><div class="label">Total de sacos</div><div class="value" id="b-sacos">0</div><div class="sub">Escamas + filtrado</div></div>
       </div>
@@ -160,6 +160,7 @@ button,input,select{font:inherit}button{cursor:pointer}
     <section id="view-saidas" class="hidden">
       <div class="hero"><div><div class="eyebrow">CONTROLE DE DESPESAS</div><h2>Despesas</h2></div><button class="primary" onclick="openExpense()">＋ &nbsp;Registrar saída</button></div>
       <div class="filters"><div class="field"><label>Dia</label><input id="date-saidas" type="date"></div></div>
+      <button type="button" class="card expense-general-card" onclick="openGeneralExpenses()" aria-label="Abrir despesas gerais por categorias"><span class="label">Despesas Geral <span aria-hidden="true">›</span></span><strong id="e-general-total">R$ 0,00</strong><span class="sub" id="e-general-caption">Histórico do mês · Loja e pessoal · Detalhar categorias</span></button>
       <div class="table-card" id="helpers-card"><div class="table-head"><strong>Histórico dos Ajudantes</strong><div class="field"><label for="helpers-month">Mês</label><input id="helpers-month" type="month"></div></div><div style="padding:20px 24px"><div class="cards" id="helpers-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px"></div><div class="card" style="min-height:0;padding:18px 20px;background:var(--soft2)"><div class="label" style="margin-bottom:10px">Ajudantes Total Bruto</div><div class="value" id="helpers-total" style="font-size:clamp(25px,6vw,36px)">R$ 0,00</div><div class="sub" id="helpers-total-caption">Tafarel + Maíra no mês selecionado</div></div></div></div>
       <div class="section-title"><h3>Despesas do dia</h3><small id="expense-count">0 registros</small></div>
       <div class="cards secondary">
@@ -490,8 +491,17 @@ function renderHelpers(){
     card.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();click()}});
   });
 }
+function openGeneralExpenses(){
+ const month=$('helpers-month').value||today().slice(0,7);
+ const rows=state.expenses.filter(x=>localDateOf(x.spent_at).startsWith(month)).slice().sort((a,b)=>new Date(a.spent_at)-new Date(b.spent_at));
+ $('detail-title').textContent='Despesas Geral · '+month.slice(5)+'/'+month.slice(0,4);
+ $('detail-body').innerHTML=renderExpenseExplorer(rows,'brutas');
+ $('detail-modal').classList.add('show');
+ bindExpenseExplorer();
+}
 function renderExpenses(){
   const d=$('date-saidas').value,rows=state.expenses.filter(x=>localDateOf(x.spent_at)===d).sort((a,b)=>new Date(a.spent_at)-new Date(b.spent_at));
+  const generalMonth=$('helpers-month').value||today().slice(0,7);const generalRows=state.expenses.filter(x=>localDateOf(x.spent_at).startsWith(generalMonth));$('e-general-total').textContent=money(sum(generalRows,'amount'));$('e-general-caption').textContent='Histórico de '+generalMonth.slice(5)+'/'+generalMonth.slice(0,4)+' · '+generalRows.length+' lançamento(s) · Toque para detalhar';
   $('e-total').textContent=money(sum(rows,'amount'));$('expense-count').textContent=rows.length+' registro(s)';
   $('expense-body').innerHTML=rows.map(x=>`<tr><td>${localTimeOf(x.spent_at)}</td><td><strong>${escapeHtml(expenseLabel(x))}</strong></td><td>${money(x.amount)}</td><td><button class="ghost danger" onclick="deleteExpense('${x.id}')">Excluir</button></td></tr>`).join('');
   $('expense-empty').classList.toggle('hidden',rows.length>0);$('expense-body').parentElement.classList.toggle('hidden',rows.length===0);renderHelpers();
