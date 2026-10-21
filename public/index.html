@@ -379,7 +379,7 @@ function expenseCat(x){
  // Cada lançamento pertence a exatamente uma categoria: somas nunca duplicadas.
  if(/\b(tafarel|tafa|luciano)\b/.test(label)&&!/\b(maira|flavio)\b/.test(label))return 'Tafarel';
  if(/\b(maira|flavio)\b/.test(label)&&!/\b(tafarel|tafa|luciano)\b/.test(label))return 'Maíra';
- if(/\b(ajudant|tafarel|tafa|luciano|maira|flavio)\b/.test(label))return 'Ajudantes sem divisão';
+ if(/\b(ajudantes?|tafarel|tafa|luciano|maira|flavio)\b/.test(label))return 'Ajudantes sem divisão';
  if(/\bgnv\b/.test(label))return 'GNV';
  if(/\b(etanol|alcool|gasolina|combustivel)\b/.test(label))return 'Combustível particular';
  if(/\b(manuten|conserto|reparo|mecanico|oficina|oleo motor|pneu)\b/.test(label))return 'Manutenção';
