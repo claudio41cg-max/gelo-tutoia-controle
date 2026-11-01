@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gelo Tutóia: floco de neve">
+<rect x="0" y="0" width="512" height="512" rx="114" fill="#f8d36d"/>
+<g fill="none" stroke="#242822" stroke-linecap="round" stroke-linejoin="round" stroke-width="25">
+<path d="M256 105V407M125 180L387 332M125 332L387 180"/>
+<path d="M214 139L256 170L298 139M214 373L256 342L298 373"/>
+<path d="M164 165L181 213L129 222M348 347L331 299L383 290"/>
+<path d="M129 290L181 299L164 347M383 222L331 213L348 165"/>
+</g></svg>
