@@ -579,33 +579,86 @@ async function api(url,opts={}){
 const geloLoginStyle=document.createElement('style');
 geloLoginStyle.textContent='#gelo-auth{position:fixed;inset:0;background:#f7f5ef;z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px}#gelo-auth[hidden]{display:none}#gelo-auth section{background:white;padding:22px;border-radius:22px;max-width:420px;width:100%;box-shadow:0 6px 32px #0001}#gelo-auth input,#gelo-auth button{display:block;width:100%;margin:10px 0;box-sizing:border-box;padding:12px}#gelo-auth .message{font-size:14px;white-space:pre-wrap}';
 document.head.appendChild(geloLoginStyle);
-const geloAuth=document.createElement('div');geloAuth.id='gelo-auth';geloAuth.innerHTML='<section><h2>Gelo Tutóia — teste Supabase</h2><p>Área de teste: não altera as vendas na Railway.</p><input id="gelo-email" type="email" placeholder="Seu e-mail"><button id="gelo-send" type="button">Enviar código por e-mail</button><input id="gelo-code" inputmode="numeric" placeholder="Código recebido" hidden><button id="gelo-verify" type="button" hidden>Confirmar código</button><p class="message" id="gelo-auth-msg">Acesso restrito à conta autorizada.</p></section>';
-geloAuth.hidden=true; // Não piscar login antes da verificação de sessão
- document.body.appendChild(geloAuth);
+
+const geloAuth=document.createElement('div');geloAuth.id='gelo-auth';
+geloAuth.innerHTML=`<section><h2>Gelo Tutóia</h2><p>Entre com sua conta para consultar vendas, histórico e despesas.</p>
+<div id="gelo-auth-login">
+<input id="gelo-email" type="email" autocomplete="email" placeholder="Seu e-mail">
+<input id="gelo-password" type="password" autocomplete="current-password" placeholder="Sua senha">
+<button id="gelo-password-login" type="button">Entrar com senha</button>
+<button id="gelo-send" type="button">Receber link por e-mail</button>
+<button id="gelo-forgot" type="button">Criar ou recuperar minha senha</button>
+<input id="gelo-code" inputmode="numeric" placeholder="Código recebido" hidden>
+<button id="gelo-verify" type="button" hidden>Confirmar código</button>
+</div>
+<div id="gelo-auth-new-password" hidden><p>Crie uma senha para esta mesma conta.</p>
+<input id="gelo-new-password" type="password" autocomplete="new-password" minlength="8" placeholder="Nova senha (mínimo 8 caracteres)">
+<input id="gelo-confirm-password" type="password" autocomplete="new-password" minlength="8" placeholder="Repita a nova senha">
+<button id="gelo-update-password" type="button">Salvar minha senha</button></div>
+<p class="message" id="gelo-auth-msg">Acesso restrito à conta autorizada.</p></section>`;
+geloAuth.hidden=true;document.body.appendChild(geloAuth);
 const authMsg=document.getElementById('gelo-auth-msg');
 async function geloInit(){
-  const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2');
-  geloDb=createClient(GELO_SUPABASE_URL,GELO_SUPABASE_PUBLISHABLE);
-  async function verifyOwner(){
-    const {data:{user}}=await geloDb.auth.getUser();
-    if(!user){geloAuth.hidden=false;return;}
-    const {data,error}=await geloDb.from('gelo_owners').select('user_id').limit(1);
-    if(error||!data?.length){geloAuth.hidden=false;authMsg.textContent='Login realizado. Esta conta ainda não foi autorizada para acessar o Gelo Tutóia.';return;}
-    geloAuth.hidden=true;await loadAll();
-  }
-  document.getElementById('gelo-send').onclick=async()=>{
-    const email=document.getElementById('gelo-email').value.trim();
-    if(!email){authMsg.textContent='Informe seu e-mail';return}
-    authMsg.textContent='Solicitando código...';
-    const {error}=await geloDb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
-    authMsg.textContent=error?error.message:'Confira seu e-mail e informe o código recebido.';
-    if(!error){document.getElementById('gelo-code').hidden=false;document.getElementById('gelo-verify').hidden=false;}
-  };
-  document.getElementById('gelo-verify').onclick=async()=>{
-    const {error}=await geloDb.auth.verifyOtp({email:document.getElementById('gelo-email').value.trim(),token:document.getElementById('gelo-code').value.trim(),type:'email'});
-    if(error){authMsg.textContent=error.message;return;}await verifyOwner();
-  };
-  await verifyOwner();
+ const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2');
+ geloDb=createClient(GELO_SUPABASE_URL,GELO_SUPABASE_PUBLISHABLE);
+ const baseUrl=location.origin+location.pathname;
+ const showNewPassword=()=>{$('gelo-auth-login').hidden=true;$('gelo-auth-new-password').hidden=false;geloAuth.hidden=false;authMsg.textContent='Defina sua nova senha. Não envie sua senha para ninguém.'};
+ async function verifyOwner(){
+  const {data:{user}}=await geloDb.auth.getUser();
+  if(!user){geloAuth.hidden=false;return}
+  const {data,error}=await geloDb.from('gelo_owners').select('user_id').limit(1);
+  if(error||!data?.length){geloAuth.hidden=false;authMsg.textContent='Esta conta ainda não está autorizada para o Gelo Tutóia.';return}
+  geloAuth.hidden=true;await loadAll();
+ }
+ $('gelo-password-login').onclick=async()=>{
+  const email=$('gelo-email').value.trim(),password=$('gelo-password').value;
+  if(!email||!password){authMsg.textContent='Informe e-mail e senha.';return}
+  authMsg.textContent='Entrando...';
+  const {error}=await geloDb.auth.signInWithPassword({email,password});
+  if(error){authMsg.textContent='Não foi possível entrar. Confira a senha ou use Recuperar senha.';return}
+  $('gelo-password').value='';await verifyOwner();
+ };
+ $('gelo-send').onclick=async()=>{
+  const email=$('gelo-email').value.trim();if(!email){authMsg.textContent='Informe seu e-mail.';return}
+  authMsg.textContent='Solicitando link de acesso...';
+  const {error}=await geloDb.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:baseUrl}});
+  authMsg.textContent=error?error.message:'Confira seu e-mail. Use apenas o link mais recente.';
+  if(!error){$('gelo-code').hidden=false;$('gelo-verify').hidden=false}
+ };
+ $('gelo-forgot').onclick=async()=>{
+  const email=$('gelo-email').value.trim();if(!email){authMsg.textContent='Informe seu e-mail primeiro.';return}
+  authMsg.textContent='Solicitando recuperação...';
+  const {error}=await geloDb.auth.resetPasswordForEmail(email,{redirectTo:baseUrl});
+  authMsg.textContent=error?error.message:'Confira seu e-mail de recuperação e toque no link mais recente.';
+ };
+ $('gelo-verify').onclick=async()=>{
+  const {error}=await geloDb.auth.verifyOtp({email:$('gelo-email').value.trim(),token:$('gelo-code').value.trim(),type:'email'});
+  if(error){authMsg.textContent=error.message;return}await verifyOwner();
+ };
+ $('gelo-update-password').onclick=async()=>{
+  const password=$('gelo-new-password').value;
+  if(password.length<8){authMsg.textContent='Use uma senha com pelo menos 8 caracteres.';return}
+  if(password!==$('gelo-confirm-password').value){authMsg.textContent='As duas senhas estão diferentes.';return}
+  authMsg.textContent='Salvando senha...';
+  const {data:{user}}=await geloDb.auth.getUser();
+  if(!user){authMsg.textContent='Sessão não encontrada. Abra um novo link de recuperação.';return}
+  const {data:owner,error:ownerError}=await geloDb.from('gelo_owners').select('user_id').limit(1);
+  if(ownerError||!owner?.length){authMsg.textContent='Conta sem permissão para alterar o acesso deste aplicativo.';return}
+  const {error}=await geloDb.auth.updateUser({password});
+  if(error){authMsg.textContent=error.message;return}
+  $('gelo-new-password').value='';$('gelo-confirm-password').value='';
+  $('gelo-auth-new-password').hidden=true;$('gelo-auth-login').hidden=false;
+  authMsg.textContent='Senha cadastrada com sucesso.';await verifyOwner();
+ };
+ // A recuperação de senha também funciona quando Supabase redireciona com tokens na URL.
+ let recovery=false;
+ geloDb.auth.onAuthStateChange((event)=>{
+  if(event==='PASSWORD_RECOVERY'){recovery=true;showNewPassword()}
+ });
+ if(location.hash.includes('type=recovery')||new URLSearchParams(location.search).get('type')==='recovery')recovery=true;
+ const {data:{session}}=await geloDb.auth.getSession();
+ if(recovery&&session){showNewPassword();return}
+ await verifyOwner();
 }
 geloInit().catch(e=>{geloAuth.hidden=false;authMsg.textContent='Falha ao conectar: '+e.message;});
 
