@@ -1,10 +1,10 @@
 {
-  "name": "Gelo Tutóia",
-  "short_name": "Gelo Tutóia",
+  "name": "Gelo Tutóia Controle",
+  "short_name": "Gelo Controle",
   "description": "Controle de vendas, caderno e saídas do Gelo Tutóia.",
-  "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "display_override": [
     "standalone",
@@ -15,7 +15,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
