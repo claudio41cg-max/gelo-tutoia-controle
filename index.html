@@ -597,7 +597,7 @@ async function geloInit(){
     const email=document.getElementById('gelo-email').value.trim();
     if(!email){authMsg.textContent='Informe seu e-mail';return}
     authMsg.textContent='Solicitando código...';
-    const {error}=await geloDb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+'/'}});
+    const {error}=await geloDb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
     authMsg.textContent=error?error.message:'Confira seu e-mail e informe o código recebido.';
     if(!error){document.getElementById('gelo-code').hidden=false;document.getElementById('gelo-verify').hidden=false;}
   };
