@@ -93,7 +93,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 /* Lista de cobranças independente do caixa e do histórico de vendas */
 #deferred-trigger{flex:0 0 auto;white-space:nowrap;border:0;background:#f2c35f;color:#292c27;border-radius:12px;padding:10px 13px;font-weight:800;font-size:14px;cursor:pointer}#deferred-number{font-size:12px} .crumb-inner>div:first-child{min-width:0;font-size:clamp(11px,2.9vw,14px)}.crumb-inner{align-items:center;gap:8px} .deferred-client{border:1px solid #dedfd8;border-radius:13px;padding:13px 14px;margin:10px 0;background:#f8f9f5;width:100%;text-align:left;font:inherit;cursor:pointer}.deferred-sale{border:1px solid #e1e2db;border-radius:13px;padding:13px;margin:9px 0}.deferred-sale small{color:#75786e;display:block;margin:6px 0}.deferred-sale button{border:0;border-radius:9px;background:#f2c35f;padding:9px 12px;font-weight:700}.deferred-paid{opacity:.75}
 .expense-scope{display:grid;gap:8px}.expense-scope button,.expense-tabs button,.expense-category{font:inherit;cursor:pointer;border:1px solid #dedfd8;background:white;padding:13px;border-radius:12px;color:#292c27}.expense-scope button{display:flex;justify-content:space-between;gap:10px;text-align:left}.expense-scope .current,.expense-tabs .current{background:#eef0e4;border-color:#9fad91}.expense-tabs{display:flex;gap:8px;margin:18px 0}.expense-tabs button{flex:1;font-size:14px}.expense-category{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:8px 0;text-align:left}.expense-category small{display:block;color:#888;margin-top:5px}.expense-category strong{white-space:nowrap}
-.expense-general-card{display:flex;flex-direction:column;align-items:stretch;text-align:left;width:100%;margin:0 0 24px;min-height:0;gap:12px;padding:22px 26px;background:#eef0e4;border:1px solid #dedfd8;cursor:pointer}.expense-general-card .label{display:flex;justify-content:space-between;font-size:22px;font-weight:800}.expense-general-card strong{font-size:clamp(25px,6vw,36px)}.expense-general-card .sub{font-size:14px}</style>
+.expense-general-card{display:flex;flex-direction:column;align-items:stretch;text-align:left;width:100%;margin:0 0 24px;min-height:0;gap:12px;padding:22px 26px;background:#eef0e4;border:1px solid #dedfd8;cursor:pointer}.expense-general-card .label{display:flex;justify-content:space-between;font-size:22px;font-weight:800}.expense-general-card strong{font-size:clamp(25px,6vw,36px)}.expense-general-card .sub{font-size:14px}.period-switch button.active{background:#f2c35f;color:#292c27;box-shadow:0 2px 9px #b18a3d30}.period-switch button:not(.active){color:#62675c}.month-navigator{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #dedfd8;border-radius:15px;padding:12px;margin:0 0 22px;flex-wrap:wrap}.month-navigator>div{flex:1;min-width:130px;text-align:center}.month-navigator strong,.month-navigator small{display:block}.month-navigator small{font-size:12px;color:#888c83;margin-top:3px}.month-navigator button{border:0;background:#f2c35f;color:#292c27;border-radius:11px;font-weight:800;padding:10px 14px;font-size:18px}.month-navigator button:disabled{background:#f2f2ec;color:#aaa}.month-navigator button.month-today{font-size:13px;flex-basis:100%;padding:11px}.period-switch button{transition:background .15s}</style>
 </head>
 <body>
 <div class="shell">
@@ -135,7 +135,7 @@ button,input,select{font:inherit}button{cursor:pointer}
     <section id="view-caderno" class="hidden">
       <div class="hero"><div><div class="eyebrow">BOM TRABALHO, CLÁUDIO</div><h2>Histórico de vendas</h2></div></div>
       <div class="filters">
-        <div class="field"><label>Data de referência</label><input id="date-caderno" type="date"></div>
+        <div class="field"><label>Data de referência</label><input id="date-caderno" type="date"></div><div class="month-navigator" id="book-month-nav"><button type="button" data-month-shift="-1" data-target="book" aria-label="Mês anterior">‹</button><div><strong id="book-month-label"></strong><small id="book-month-status"></small></div><button type="button" data-month-shift="1" data-target="book" aria-label="Próximo mês">›</button><button type="button" class="month-today" data-current-month="book">Voltar ao mês atual</button></div>
         <div class="field" style="grid-column:span 2"><label>Visualização</label><div class="period-switch"><button data-period="day" class="active">Dia</button><button data-period="week">Semana</button><button data-period="month">Mês</button></div></div>
       </div>
       <div class="table-card" style="margin:0 0 30px"><button type="button" id="client-history-toggle" class="client-history-toggle" style="padding:21px 24px" aria-expanded="false"><span><strong style="font-size:19px">Clientes</strong><small id="client-history-count"></small></span><span id="client-history-arrow" aria-hidden="true">⌄</span></button><div id="client-history-list" class="client-history-list hidden"></div></div>
@@ -159,7 +159,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 
     <section id="view-saidas" class="hidden">
       <div class="hero"><div><div class="eyebrow">CONTROLE DE DESPESAS</div><h2>Despesas</h2></div><button class="primary" onclick="openExpense()">＋ &nbsp;Registrar saída</button></div>
-      <div class="filters"><div class="field"><label>Dia</label><input id="date-saidas" type="date"></div></div>
+      <div class="filters"><div class="field"><label>Dia</label><input id="date-saidas" type="date"></div></div><div class="month-navigator" id="expense-month-nav"><button type="button" data-month-shift="-1" data-target="expenses" aria-label="Mês anterior">‹</button><div><strong id="expense-month-label"></strong><small id="expense-month-status"></small></div><button type="button" data-month-shift="1" data-target="expenses" aria-label="Próximo mês">›</button><button type="button" class="month-today" data-current-month="expenses">Voltar ao mês atual</button></div>
       <button type="button" class="card expense-general-card" onclick="openGeneralExpenses()" aria-label="Abrir despesas gerais por categorias"><span class="label">Despesas Geral <span aria-hidden="true">›</span></span><strong id="e-general-total">R$ 0,00</strong><span class="sub" id="e-general-caption">Histórico do mês · Loja e pessoal · Detalhar categorias</span></button>
       <div class="table-card" id="helpers-card"><div class="table-head"><strong>Histórico dos Ajudantes</strong><div class="field"><label for="helpers-month">Mês</label><input id="helpers-month" type="month"></div></div><div style="padding:20px 24px"><div class="cards" id="helpers-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px"></div><div class="card" style="min-height:0;padding:18px 20px;background:var(--soft2)"><div class="label" style="margin-bottom:10px">Ajudantes Total Bruto</div><div class="value" id="helpers-total" style="font-size:clamp(25px,6vw,36px)">R$ 0,00</div><div class="sub" id="helpers-total-caption">Tafarel + Maíra no mês selecionado</div></div></div></div>
       <div class="section-title"><h3>Despesas do dia</h3><small id="expense-count">0 registros</small></div>
@@ -222,6 +222,26 @@ function showView(v){
   if(v==='caderno')renderBook(); if(v==='saidas')renderExpenses();
 }
 
+// Navegação mensal por data, sem excluir, mover ou duplicar registros.
+function shiftMonth(value,delta){const [y,m]=value.slice(0,7).split('-').map(Number);const d=new Date(Date.UTC(y,m-1+delta,1));return d.toISOString().slice(0,7)}
+function monthDisplay(ym){const [y,m]=ym.split('-').map(Number);return new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,1)))}
+function updateMonthNavigator(){
+ const now=today().slice(0,7),book=$('date-caderno').value.slice(0,7)||now,expense=$('helpers-month').value||now;
+ $('book-month-label').textContent=monthDisplay(book);$('book-month-status').textContent=book===now?'Mês atual':'Histórico mensal';
+ $('expense-month-label').textContent=monthDisplay(expense);$('expense-month-status').textContent=expense===now?'Mês atual':'Histórico mensal';
+ document.querySelectorAll('[data-month-shift="1"]').forEach(b=>b.disabled=(b.dataset.target==='book'?book:expense)>=now);
+ document.querySelectorAll('[data-current-month]').forEach(b=>b.disabled=(b.dataset.currentMonth==='book'?book:expense)===now);
+}
+function navigateBookMonth(ym){
+ const now=today(),target=ym===now.slice(0,7)?now:ym+'-01';
+ $('date-caderno').value=target;
+ state.period='month';document.querySelectorAll('[data-period]').forEach(b=>b.classList.toggle('active',b.dataset.period==='month'));
+ renderBook();updateMonthNavigator();
+}
+function navigateExpenseMonth(ym){
+ const now=today();$('helpers-month').value=ym;$('date-saidas').value=ym===now.slice(0,7)?now:ym+'-01';
+ renderExpenses();updateMonthNavigator();
+}
 function localDateOf(iso){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso))}catch{return ''}}
 function localTimeOf(iso){try{return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso))}catch{return ''}}
 function sum(rows,key){return rows.reduce((a,x)=>a+Number(x[key]||0),0)}
@@ -684,7 +704,7 @@ $('sales-expand-toggle').addEventListener('click',()=>{
  $('sales-expand-toggle').setAttribute('aria-expanded',String(opening));
  $('sales-expand-arrow').textContent=opening?'⌃':'⌄';
 });
-$('date-caderno').addEventListener('change',renderBook);$('date-saidas').addEventListener('change',renderExpenses);$('helpers-month').addEventListener('change',()=>{renderHelpers();renderExpenses()});
+$('date-caderno').addEventListener('change',()=>{renderBook();updateMonthNavigator()});$('date-saidas').addEventListener('change',()=>{const month=$('date-saidas').value.slice(0,7);$('helpers-month').value=month;renderExpenses();updateMonthNavigator()});$('helpers-month').addEventListener('change',()=>{const month=$('helpers-month').value;$('date-saidas').value=month===today().slice(0,7)?today():month+'-01';renderExpenses();updateMonthNavigator()});document.querySelectorAll('[data-month-shift]').forEach(b=>b.onclick=()=>{const v=b.dataset.target==='book'?$('date-caderno').value.slice(0,7):$('helpers-month').value;const next=shiftMonth(v,Number(b.dataset.monthShift));if(next>today().slice(0,7))return;b.dataset.target==='book'?navigateBookMonth(next):navigateExpenseMonth(next)});document.querySelectorAll('[data-current-month]').forEach(b=>b.onclick=()=>b.dataset.currentMonth==='book'?navigateBookMonth(today().slice(0,7)):navigateExpenseMonth(today().slice(0,7)));
 $('e-helper').addEventListener('change',toggleHelperSplit);
 $('e-category').addEventListener('change',()=>{const personal=$('e-category').value==='pessoal';$('e-helper-field').classList.toggle('hidden',personal);if(personal){$('e-helper').value='';toggleHelperSplit()}});
 $('e-desc').addEventListener('input',()=>{
@@ -700,7 +720,7 @@ $('e-desc').addEventListener('input',()=>{
 document.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{state.period=b.dataset.period;document.querySelectorAll('[data-period]').forEach(x=>x.classList.toggle('active',x===b));renderBook()});
 $('s-type').addEventListener('change',()=>{$('s-price').value=$('s-type').value==='filt'?13:7});
 document.querySelectorAll('#view-caderno [data-book]').forEach(card=>{const run=()=>openBookDetail(card.dataset.book);card.addEventListener('click',run);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();run()}})});
-const t=today();$('date-vendas').value=t;$('date-caderno').value=t;$('date-saidas').value=t;$('helpers-month').value=t.slice(0,7);
+const t=today();$('date-vendas').value=t;$('date-caderno').value=t;$('date-saidas').value=t;$('helpers-month').value=t.slice(0,7);updateMonthNavigator();
 
 function openHashView(){
   const v=location.hash.replace('#','');
