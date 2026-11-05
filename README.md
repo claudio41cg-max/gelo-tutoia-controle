@@ -6,7 +6,7 @@
 
 1. Pergunte/identifique a **data de trabalho** no fuso `America/Sao_Paulo`.
 2. Receba a relação de vendas em linguagem natural, inclusive por voz, e despesas; normalize **cliente, tipo de gelo, quantidade, preço unitário, forma de pagamento e data**.
-3. Prefira **preços e condições explicitamente informados no dia**. Depois consulte as regras confirmadas neste manual e os registros recentes no Supabase; **não confunda preço histórico com tabela cadastral**.
+3. **USE OS PREÇOS FIXOS JÁ DEFINIDOS PELO RESPONSÁVEL PARA CADA CLIENTE.** Eles permanecem em vigor até o responsável solicitar expressamente uma alteração. Não reajuste, não escolha preço por frequência de vendas e não use um valor isolado do histórico para substituir a regra vigente. Quando o usuário mencionar um valor na venda, utilize-o para conferir a conta; se ele divergir do preço fixo, confirme se é exceção somente daquela venda ou mudança permanente **antes** de alterar a referência de preço. Uma anotação diária não é ordem automática de atualizar a tabela.
 4. “**Pagou**” significa **Dinheiro**, salvo cliente com regra explícita de PIX; “**PIX**” é PIX; “**pagar depois**” é **Fiado**, independentemente do meio habitual de quitação.
 5. Mostre resumo com quantidades, dinheiro, PIX, fiado, bruto, despesas, líquido; quando faltar um preço não comprovado, pergunte ou sinalize antes de lançar.
 6. **Só grave quando o usuário autorizar**. Consulte antes vendas e despesas da data para evitar duplicações. Separe produtos diferentes em linhas diferentes e use identificadores únicos e estáveis.
@@ -30,6 +30,12 @@
 - O usuário quer que **“Reiniciar tudo” apague somente a tela/vendas atuais do dia, sem perder caderno ou históricos**. Antes de implementar/usar ação de reinício, confirmar a semântica real no código atual. Nunca executar DELETE no banco para simular “limpar a tela”.
 - A ordem dos clientes na rota e apelidos estão codificados em `public/index.html` nas estruturas `ROUTE_CLIENT_ORDER`, `CLIENT_ALIASES` e `canonicalClient()`. **Atenção:** existem apelidos que unificam nomes no caderno, enquanto vendas antigas preservam os nomes gravados; ao reconciliar/evitar duplicatas, considerar apelidos sem alterar registros anteriores automaticamente.
 
+## Política obrigatória de preços fixos
+
+**Ordem expressa do proprietário em 05/11/2026:** todos os preços por cliente definidos anteriormente continuam **fixos e inalterados até que ele peça para mudar**. O GPT que assumir a operação deve aplicar esses valores automaticamente, sem perguntar de novo pelos preços já confirmados, e jamais reajustar valores por conta própria. O histórico do Supabase é fonte de conferência e identificação, mas **não substitui uma lista de preços explicitamente programada**. Antes de presumir que um preço histórico equivale a cadastro vigente, verificar o código/configuração e a tabela de referência abaixo. Se algum cliente não tiver preço programado comprovável, não inventar: conferir com o responsável sem mexer na tabela dos demais.
+
+**Hierarquia:** (1) alteração permanente explicitamente ordenada pelo proprietário; (2) preço fixo já programado e confirmado para o cliente; (3) exceção expressa para uma venda específica, sem alterar o valor fixo; (4) histórico recente apenas para descobrir um preço ainda não documentado, sujeito a confirmação. **Exemplo:** se a venda vier com preço discrepante, não transformar essa discrepância em nova regra do cliente sem autorização. Nunca modificar preços históricos retroativamente.
+
 ## Produtos e preços — regras e exceções
 
 | Gelo / caso | Preço por saco | Evidência e cuidado |
@@ -46,7 +52,7 @@
 | Escama Chatuba | R$ 8 | Histórico recente |
 | Escama Márcio, Ivan, Alex Laranja, Padaria Paciência, Lilian, Custódio, Filomena | R$ 7 | Histórico recente; confirmar se surgir alteração |
 
-**Não atribuir automaticamente R$ 8 a todos os clientes fora de peixarias.** Há registros antigos com valores diferentes, promoções e exceções. O valor **dito pelo responsável na venda atual** prevalece. Exemplo: há registros históricos de filtrado a R$ 5/R$ 10 para outros produtos/volumes; não substituem a regra do filtrado de 10 kg. Não inferir sacos de 5 kg quando o usuário se refere ao filtrado padrão.
+**Não atribuir automaticamente R$ 8 a todos os clientes fora de peixarias.** Há registros antigos com valores diferentes, promoções e exceções. O preço fixo confirmado de cada cliente continua valendo; valor excepcional ditado na venda aplica-se àquela operação sem modificar a tabela permanente. Exemplo: há registros históricos de filtrado a R$ 5/R$ 10 para outros produtos/volumes; não substituem a regra do filtrado de 10 kg. Não inferir sacos de 5 kg quando o usuário se refere ao filtrado padrão.
 
 ### Clientes, aliases e formas de pagamento
 
@@ -56,7 +62,7 @@
 - `Marcelo` e `Marcelo Cosmos` são clientes distinguíveis; ambos compram habitualmente filtrado de R$ 13. Não fundir sem confirmação.
 - `Caldo da Praça` / `Caldo de Cana da Praça` e `The Best` / `Debest` são **dois clientes diferentes**. Cada um pode comprar 1 filtrado + 1 escama em uma mesma entrega.
 - `Seu Luiz` aparece em aliases do frontend como `Luiz Peixaria`; manter consistência e evitar duas linhas para a mesma entrega. `Sr. Gilson` e `Seu Gilson` são o mesmo cliente.
-- Outros clientes conhecidos incluem Padaria BMG, Gisele, Filomena, Ivan, Seu Pedro, Jonny Feira, Marcão, Tia, Churrasco Lilian, Churrasco da Tia, Peixaria Rua, Chatuba. Consultar registros, não criar preço fixo sem confirmação.
+- Outros clientes conhecidos incluem Padaria BMG, Gisele, Filomena, Ivan, Seu Pedro, Jonny Feira, Marcão, Tia, Churrasco Lilian, Churrasco da Tia, Peixaria Rua, Chatuba. **Manter valores programados já existentes**; consultar registros para localizar valores ainda não documentados, sem converter automaticamente um histórico isolado em nova regra.
 - **Pagamento efetivo e cobrança**: uma venda registrada como `Fiado` não passa a ser `PIX` ou `Dinheiro` apenas porque esse cliente normalmente usa esse meio. A quitação exige fluxo próprio e conferência.
 
 ## Como interpretar a fala do usuário
@@ -166,5 +172,7 @@ Antes de operar em outra data, **substituir o intervalo**. Para despesas, usar `
 > Leia primeiro o arquivo README.md do repositório `claudio41cg-max/gelo-tutoia-controle`. Sou responsável pelo Gelo Tutóia. Vou ditar vendas e despesas do dia; você deve reconhecer clientes, preços e formas de pagamento, mostrar os totais, esperar minha autorização para enviar, evitar duplicidade e conferir no Supabase após a gravação. O projeto Supabase chama-se `gelo-tutoia-controle`. Não recrie o aplicativo e não mexa no histórico de dias anteriores. Se algum detalhe divergente surgir, leia a implementação atual e pergunte antes de escrever.
 
 ---
+
+**Atenção para outro GPT:** o usuário não autorizou reajustar nenhum cliente. Os valores já definidos são permanentes até ordem contrária. Não confundir "preço calculado no lançamento" com "alterar cadastro".
 
 **Nota de precisão:** documento compilado com observação do repositório, esquema e dados reais consultados em 05/11/2026 e regras comerciais informadas pelo responsável. Sempre tratar o estado ao vivo do app e instruções mais recentes do responsável como superiores a este registro histórico.
